@@ -32,4 +32,6 @@
 *.app
 
 #Visual Studio Solution
-MVS/
+build/
+.vs/
+.vscode/

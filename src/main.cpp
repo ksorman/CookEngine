@@ -1,4 +1,4 @@
-#include <glad/gl.h>
+#include <GL.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
@@ -99,6 +99,7 @@ int main(void)
 		exit(EXIT_FAILURE);
 	}
 
+
 	glfwSetKeyCallback(
 		window,
 		[](GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -109,38 +110,45 @@ int main(void)
 	);
 
 	glfwMakeContextCurrent(window);
+
+	GL4API api;
+
+	GetAPI4(&api, [](const char* func) -> void* { return (void*)glfwGetProcAddress(func); });
+	InjectAPITracer4(&api);
+
+
 	gladLoadGL(glfwGetProcAddress);
 	glfwSwapInterval(1);
 
-	const GLuint shaderVertex = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(shaderVertex, 1, &shaderCodeVertex, nullptr);
-	glCompileShader(shaderVertex);
+	const GLuint shaderVertex = api.glCreateShader(GL_VERTEX_SHADER);
+	api.glShaderSource(shaderVertex, 1, &shaderCodeVertex, nullptr);
+	api.glCompileShader(shaderVertex);
 
-	const GLuint shaderFragment = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(shaderFragment, 1, &shaderCodeFragment, nullptr);
-	glCompileShader(shaderFragment);
+	const GLuint shaderFragment = api.glCreateShader(GL_FRAGMENT_SHADER);
+	api.glShaderSource(shaderFragment, 1, &shaderCodeFragment, nullptr);
+	api.glCompileShader(shaderFragment);
 
-	const GLuint program = glCreateProgram();
-	glAttachShader(program, shaderVertex);
-	glAttachShader(program, shaderFragment);
-	glLinkProgram(program);
-	glUseProgram(program);
+	const GLuint program = api.glCreateProgram();
+	api.glAttachShader(program, shaderVertex);
+	api.glAttachShader(program, shaderFragment);
+	api.glLinkProgram(program);
+	api.glUseProgram(program);
 
 	GLuint vao;
-	glCreateVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+	api.glCreateVertexArrays(1, &vao);
+	api.glBindVertexArray(vao);
 
 	const GLsizeiptr kBufferSize = sizeof(PerFrameData);
 
 	GLuint perFrameDataBuffer;
-	glCreateBuffers(1, &perFrameDataBuffer);
-	glNamedBufferStorage(perFrameDataBuffer, kBufferSize, nullptr, GL_DYNAMIC_STORAGE_BIT);
-	glBindBufferRange(GL_UNIFORM_BUFFER, 0, perFrameDataBuffer, 0, kBufferSize);
+	api.glCreateBuffers(1, &perFrameDataBuffer);
+	api.glNamedBufferStorage(perFrameDataBuffer, kBufferSize, nullptr, GL_DYNAMIC_STORAGE_BIT);
+	api.glBindBufferRange(GL_UNIFORM_BUFFER, 0, perFrameDataBuffer, 0, kBufferSize);
 
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_POLYGON_OFFSET_LINE);
-	glPolygonOffset(-1.0f, -1.0f);
+	api.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	api.glEnable(GL_DEPTH_TEST);
+	api.glEnable(GL_POLYGON_OFFSET_LINE);
+	api.glPolygonOffset(-1.0f, -1.0f);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -148,34 +156,34 @@ int main(void)
 		glfwGetFramebufferSize(window, &width, &height);
 		const float ratio = width / (float)height;
 
-		glViewport(0, 0, width, height);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		api.glViewport(0, 0, width, height);
+		api.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		const mat4 m = glm::rotate(glm::translate(mat4(1.0f), vec3(0.0f, 0.0f, -3.5f)), (float)glfwGetTime(), vec3(1.0f, 1.0f, 1.0f));
 		const mat4 p = glm::perspective(45.0f, ratio, 0.1f, 1000.0f);
 
 		PerFrameData perFrameData = { .mvp = p * m, .isWireframe = false };
 
-		glNamedBufferSubData(perFrameDataBuffer, 0, kBufferSize, &perFrameData);
+		api.glNamedBufferSubData(perFrameDataBuffer, 0, kBufferSize, &perFrameData);
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		api.glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		api.glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		perFrameData.isWireframe = true;
-		glNamedBufferSubData(perFrameDataBuffer, 0, kBufferSize, &perFrameData);
+		api.glNamedBufferSubData(perFrameDataBuffer, 0, kBufferSize, &perFrameData);
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		api.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		api.glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
-	glDeleteBuffers(1, &perFrameDataBuffer);
-	glDeleteProgram(program);
-	glDeleteShader(shaderFragment);
-	glDeleteShader(shaderVertex);
-	glDeleteVertexArrays(1, &vao);
+	api.glDeleteBuffers(1, &perFrameDataBuffer);
+	api.glDeleteProgram(program);
+	api.glDeleteShader(shaderFragment);
+	api.glDeleteShader(shaderVertex);
+	api.glDeleteVertexArrays(1, &vao);
 
 	glfwDestroyWindow(window);
 	glfwTerminate();
