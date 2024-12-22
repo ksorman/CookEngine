@@ -1,8 +1,16 @@
 #include <iostream>
 
 #include "CookEngine.h"
+namespace CookEngine{
 
-void CookEngine::EngineApi::PrintHelloWorld()
+void EngineApi::Init()
 {
-	std::cout << "Hello world!" << std::endl;
+	m_renderer = std::make_unique<Renderer>();
+	m_renderer->Init();
+}
+
+void EngineApi::Deinit()
+{
+	m_renderer->Deinit();
+}
 }
