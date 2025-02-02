@@ -11,5 +11,5 @@ add_subdirectory(externals/spdlog)
 add_subdirectory(externals/glfw)
 
 add_library(${LIB_NAME} STATIC ${HEADER_FILES} ${SRC_FILES})
-target_include_directories(CookEngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/externals/spdlog/include)
+target_include_directories(CookEngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/externals/spdlog/include ${CMAKE_CURRENT_SOURCE_DIR}/externals/glfw/include)
 target_link_libraries(CookEngine glfw Vulkan::Vulkan spdlog::spdlog)

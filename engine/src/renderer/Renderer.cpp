@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "GLFW/glfw3.h"
 #include <cstdint>
 #include <spdlog/spdlog.h>
 #include <vector>
@@ -31,6 +32,11 @@ void Renderer::CreateInstance(VkInstance *pInstance) {
 
   std::vector<const char *> layers = {"VK_LAYER_KHRONOS_validation"};
 
+  uint32_t glfwExtensionCount = 0;
+  const char **glfwExtensions;
+
+  glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
   VkInstanceCreateInfo insatnceCreateInfo{
       .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
       .pNext = nullptr,
@@ -38,12 +44,14 @@ void Renderer::CreateInstance(VkInstance *pInstance) {
       .pApplicationInfo = &appInfo,
       .enabledLayerCount = static_cast<uint32_t>(layers.size()),
       .ppEnabledLayerNames = layers.data(),
-      .enabledExtensionCount = 0,
-      .ppEnabledExtensionNames = nullptr};
+      .enabledExtensionCount = glfwExtensionCount,
+      .ppEnabledExtensionNames = glfwExtensions};
 
   auto vkResult = vkCreateInstance(&insatnceCreateInfo, nullptr, pInstance);
   if (vkResult == VK_SUCCESS) {
     spdlog::info("Instance was created successfully");
+  } else {
+    spdlog::error("Instance wasn't created");
   }
 }
 
