@@ -7,7 +7,7 @@ namespace CookEngine {
 void EngineApi::Init() {
   m_window = std::make_unique<Window>();
   m_renderer = std::make_unique<Renderer>();
-  m_renderer->Init();
+  m_renderer->Init(m_window->GetHWND());
 }
 
 void EngineApi::Deinit() { m_renderer->Deinit(); }

@@ -3,29 +3,32 @@
 #include <spdlog/spdlog.h>
 
 namespace CookEngine {
-Window::Window() {
+Window::Window()
+{
   glfwInit();
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-  window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+  m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
   spdlog::info("GLFW Window was initialized");
 }
 
-bool Window::IsWindowShouldClose() { return glfwWindowShouldClose(window); }
+bool Window::IsWindowShouldClose() { return glfwWindowShouldClose(m_window); }
 void Window::Events() { glfwPollEvents(); }
 
-void Window::Loop() {
-  while (!IsWindowShouldClose()) {
-    Events();
-  }
+void Window::Loop()
+{
+  while (!IsWindowShouldClose()) { Events(); }
 }
 
-Window::~Window() {
-  glfwDestroyWindow(window);
+GLFWwindow *Window::GetHWND() { return m_window; }
+
+Window::~Window()
+{
+  glfwDestroyWindow(m_window);
 
   glfwTerminate();
   spdlog::info("GLFW Window was destroyed");
 }
-} // namespace CookEngine
+}// namespace CookEngine
