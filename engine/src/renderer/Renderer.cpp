@@ -4,6 +4,7 @@
 #include <set>
 #include <spdlog/spdlog.h>
 #include <vulkan/vulkan_core.h>
+#include <fstream>
 
 namespace CookEngine {
 
@@ -16,6 +17,7 @@ void Renderer::Init(GLFWwindow *window)
     CreateLogicalDevice();
     auto format = CreateSwapchain(window);
     CreateImageView(format);
+    CreateGraphicsPipeline();
 }
 
 void Renderer::Deinit()
@@ -251,6 +253,69 @@ void Renderer::CreateImageView(const VkFormat& format)
         }
     }
     spdlog::info("ImageView for swapchain successfully created");
+}
+
+void Renderer::CreateGraphicsPipeline()
+{
+    //TODO(Change path) Change those paths
+    auto vertShaderCode = ReadFile("D:/CookEngine/build/demo/Debug/shaders/triangleVS.spv"); 
+    auto pixelShaderCode = ReadFile("D:/CookEngine/build/demo/Debug/shaders/trianglePS.spv");
+
+    VkShaderModule vertShaderModule = CreateShaderModule(vertShaderCode);
+    VkShaderModule pixelShaderModule = CreateShaderModule(pixelShaderCode);
+
+    VkPipelineShaderStageCreateInfo vertShaderStageInfo{ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+        .module = vertShaderModule,
+        .pName = "main",
+        .pSpecializationInfo = nullptr };
+
+    VkPipelineShaderStageCreateInfo pixelShaderStageInfo{ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .module = pixelShaderModule,
+        .pName = "main",
+        .pSpecializationInfo = nullptr };
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, pixelShaderStageInfo};
+
+    vkDestroyShaderModule(m_device, pixelShaderModule, nullptr);
+    vkDestroyShaderModule(m_device, vertShaderModule, nullptr);
+}
+
+VkShaderModule Renderer::CreateShaderModule(const std::vector<char> &code)
+{
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = code.size();
+    createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
+
+    VkShaderModule shaderModule;
+    if (vkCreateShaderModule(m_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+        spdlog::error("Failed to create shader module!");
+    }
+
+    return shaderModule;
+}
+
+std::vector<char> Renderer::ReadFile(const std::string &filename)
+{
+    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+    if (!file.is_open()) {
+        spdlog::error("Failed to open file: {}", filename);
+        return {};
+    }
+
+    size_t fileSize = (size_t)file.tellg();
+    std::vector<char> buffer(fileSize);
+
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+    file.close();
+
+    return buffer;
 }
 
 void Renderer::CreateLogicalDevice()

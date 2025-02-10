@@ -2,6 +2,7 @@
 #define RENDERER_H
 
 #include <optional>
+#include <string>
 #include <vector>
 #define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
@@ -41,6 +42,12 @@ class Renderer
     void CreateSurface(GLFWwindow *window);
     VkFormat CreateSwapchain(GLFWwindow *window);
     void CreateImageView(const VkFormat& format);
+    
+    void CreateGraphicsPipeline();
+    VkShaderModule CreateShaderModule(const std::vector<char>& code);
+
+    static std::vector<char> ReadFile(const std::string& filename);
+
     void DestroyInstance();
     void DestroySurface();
     void DestroyDevice();
