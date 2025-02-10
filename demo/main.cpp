@@ -1,6 +1,7 @@
 #include <CookEngine.h>
 
-int main(){
+int main()
+{
     CookEngine::EngineApi engineApi;
     engineApi.Init();
     engineApi.Loop();

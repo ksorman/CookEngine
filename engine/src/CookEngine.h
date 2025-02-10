@@ -6,15 +6,16 @@
 #include <memory>
 
 namespace CookEngine {
-class EngineApi {
-public:
-  void Init();
-  void Deinit();
-  bool Loop();
+class EngineApi
+{
+  public:
+    void Init();
+    void Deinit();
+    bool Loop();
 
-private:
-  std::unique_ptr<Renderer> m_renderer;
-  std::unique_ptr<Window> m_window;
+  private:
+    std::unique_ptr<Renderer> m_renderer;
+    std::unique_ptr<Window> m_window;
 };
-} // namespace CookEngine
-#endif // COOK_ENGINE_H
+}// namespace CookEngine
+#endif// COOK_ENGINE_H
