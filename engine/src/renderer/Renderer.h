@@ -53,6 +53,7 @@ class Renderer
     void DestroyDevice();
     void DestroySwapchain();
     void DestroyImageView();
+    void DestroyPipelineLayout();
     QueueFamilyIndices ChooseQueue();
     SwapChainSupportDetails QuerySwapChainSupport();
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
@@ -68,8 +69,11 @@ class Renderer
 
     VkSurfaceKHR m_surface;
     VkSwapchainKHR m_swapChain;
+    VkExtent2D m_swapChainExtent;
     std::vector<VkImage> m_swapChainImages;
     std::vector<VkImageView> m_swapChainImageViews;
+
+    VkPipelineLayout m_pipelineLayout;
 };
 }// namespace CookEngine
 #endif// RENDERER_H
