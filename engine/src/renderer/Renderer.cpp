@@ -1,10 +1,11 @@
 #include "Renderer.h"
 
 #include <cstdint>
+#include <fstream>
 #include <set>
 #include <spdlog/spdlog.h>
 #include <vulkan/vulkan_core.h>
-#include <fstream>
+
 
 namespace CookEngine {
 
@@ -17,12 +18,15 @@ void Renderer::Init(GLFWwindow *window)
     CreateLogicalDevice();
     auto format = CreateSwapchain(window);
     CreateImageView(format);
+    CreateRenderPass(format);
     CreateGraphicsPipeline();
 }
 
 void Renderer::Deinit()
 {
     spdlog::info("Reneder Deinit");
+    DestroyPipeline();
+    DestroyRenderPass();
     DestroyPipelineLayout();
     DestroyImageView();
     DestroySwapchain();
@@ -224,7 +228,7 @@ VkFormat Renderer::CreateSwapchain(GLFWwindow *window)
     return surfaceFormat.format;
 }
 
-void Renderer::CreateImageView(const VkFormat& format)
+void Renderer::CreateImageView(const VkFormat &format)
 {
     m_swapChainImageViews.resize(m_swapChainImages.size());
 
@@ -258,8 +262,8 @@ void Renderer::CreateImageView(const VkFormat& format)
 
 void Renderer::CreateGraphicsPipeline()
 {
-    //TODO(Change path) Change those paths
-    auto vertShaderCode = ReadFile("D:/CookEngine/build/demo/Debug/shaders/triangleVS.spv"); 
+    // TODO(Change path) Change those paths
+    auto vertShaderCode = ReadFile("D:/CookEngine/build/demo/Debug/shaders/triangleVS.spv");
     auto pixelShaderCode = ReadFile("D:/CookEngine/build/demo/Debug/shaders/trianglePS.spv");
 
     VkShaderModule vertShaderModule = CreateShaderModule(vertShaderCode);
@@ -350,6 +354,17 @@ void Renderer::CreateGraphicsPipeline()
     colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;// Optional
     colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;// Optional
 
+    VkPipelineColorBlendStateCreateInfo colorBlending{};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.logicOp = VK_LOGIC_OP_COPY;// Optional
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = &colorBlendAttachment;
+    colorBlending.blendConstants[0] = 0.0f;// Optional
+    colorBlending.blendConstants[1] = 0.0f;// Optional
+    colorBlending.blendConstants[2] = 0.0f;// Optional
+    colorBlending.blendConstants[3] = 0.0f;// Optional
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 0;// Optional
@@ -359,6 +374,31 @@ void Renderer::CreateGraphicsPipeline()
 
     if (vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
         spdlog::error("Failed to create pipeline layout!");
+    }
+
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pDepthStencilState = nullptr;// Optional
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.layout = m_pipelineLayout;
+    pipelineInfo.renderPass = m_renderPass;
+    pipelineInfo.subpass = 0;
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;// Optional
+    pipelineInfo.basePipelineIndex = -1;// Optional
+
+    if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline)
+        != VK_SUCCESS) {
+        spdlog::error("Failed to create graphics pipeline!");
+    } else {
+        spdlog::info("Graphics pipeline created successfully!");
     }
 
     vkDestroyShaderModule(m_device, pixelShaderModule, nullptr);
@@ -378,6 +418,39 @@ VkShaderModule Renderer::CreateShaderModule(const std::vector<char> &code)
     }
 
     return shaderModule;
+}
+
+void Renderer::CreateRenderPass(const VkFormat &format)
+{
+    VkAttachmentDescription colorAttachment{};
+    colorAttachment.format = format;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference colorAttachmentRef{};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+
+    VkRenderPassCreateInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = 1;
+    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+
+    if (vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS) {
+        spdlog::error("Failed to create render pass!");
+    }
 }
 
 std::vector<char> Renderer::ReadFile(const std::string &filename)
@@ -460,4 +533,8 @@ void Renderer::DestroyImageView()
 }
 
 void Renderer::DestroyPipelineLayout() { vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr); }
+
+void Renderer::DestroyPipeline() { vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr); }
+
+void Renderer::DestroyRenderPass() { vkDestroyRenderPass(m_device, m_renderPass, nullptr); }
 }// namespace CookEngine

@@ -45,6 +45,7 @@ class Renderer
     
     void CreateGraphicsPipeline();
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
+    void CreateRenderPass(const VkFormat& format);
 
     static std::vector<char> ReadFile(const std::string& filename);
 
@@ -53,7 +54,9 @@ class Renderer
     void DestroyDevice();
     void DestroySwapchain();
     void DestroyImageView();
+    void DestroyRenderPass();
     void DestroyPipelineLayout();
+    void DestroyPipeline();
     QueueFamilyIndices ChooseQueue();
     SwapChainSupportDetails QuerySwapChainSupport();
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
@@ -73,7 +76,10 @@ class Renderer
     std::vector<VkImage> m_swapChainImages;
     std::vector<VkImageView> m_swapChainImageViews;
 
+    VkRenderPass m_renderPass;
     VkPipelineLayout m_pipelineLayout;
+
+    VkPipeline m_graphicsPipeline;
 };
 }// namespace CookEngine
 #endif// RENDERER_H
