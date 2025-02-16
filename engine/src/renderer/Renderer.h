@@ -33,6 +33,7 @@ class Renderer
 {
   public:
     void Init(GLFWwindow *window);
+    void DrawFrame();
     void Deinit();
 
   private:
@@ -43,9 +44,16 @@ class Renderer
     VkFormat CreateSwapchain(GLFWwindow *window);
     void CreateImageView(const VkFormat& format);
     
+    void CreateFramebuffers();
     void CreateGraphicsPipeline();
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
     void CreateRenderPass(const VkFormat& format);
+
+    void CreateCommandPool();
+    void CreateCommandBuffer();
+    void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+    void CreateSyncObjects();
 
     static std::vector<char> ReadFile(const std::string& filename);
 
@@ -54,9 +62,12 @@ class Renderer
     void DestroyDevice();
     void DestroySwapchain();
     void DestroyImageView();
+    void DestroyFramebuffers();
     void DestroyRenderPass();
     void DestroyPipelineLayout();
     void DestroyPipeline();
+    void DestroyCommandPool();
+    void DestroySyncObjects();
     QueueFamilyIndices ChooseQueue();
     SwapChainSupportDetails QuerySwapChainSupport();
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
@@ -75,11 +86,19 @@ class Renderer
     VkExtent2D m_swapChainExtent;
     std::vector<VkImage> m_swapChainImages;
     std::vector<VkImageView> m_swapChainImageViews;
+    std::vector<VkFramebuffer> m_swapChainFramebuffers;
 
     VkRenderPass m_renderPass;
     VkPipelineLayout m_pipelineLayout;
 
     VkPipeline m_graphicsPipeline;
+
+    VkCommandPool m_commandPool;
+    VkCommandBuffer m_commandBuffer;
+
+    VkSemaphore m_imageAvailableSemaphore;
+    VkSemaphore m_renderFinishedSemaphore;
+    VkFence m_inFlightFence;
 };
 }// namespace CookEngine
 #endif// RENDERER_H

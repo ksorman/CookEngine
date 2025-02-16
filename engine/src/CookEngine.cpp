@@ -15,7 +15,10 @@ void EngineApi::Deinit() { m_renderer->Deinit(); }
 
 bool EngineApi::Loop()
 {
-    while (!m_window->IsWindowShouldClose()) { m_window->Loop(); }
+    while (!m_window->IsWindowShouldClose()) {
+        m_window->Events();
+        m_renderer->DrawFrame();
+    }
     return true;
 }
 }// namespace CookEngine
