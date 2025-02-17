@@ -36,12 +36,16 @@ class Renderer
     void DrawFrame();
     void Deinit();
 
+    bool& RefToBoolForResize();
+
   private:
     void CreateInstance();
     void CreatePhysicalDevice();
     void CreateLogicalDevice();
     void CreateSurface(GLFWwindow *window);
     VkFormat CreateSwapchain(GLFWwindow *window);
+    void CleanupSwapchain();
+    void RecreateSwapchain();
     void CreateImageView(const VkFormat& format);
     
     void CreateFramebuffers();
@@ -50,7 +54,7 @@ class Renderer
     void CreateRenderPass(const VkFormat& format);
 
     void CreateCommandPool();
-    void CreateCommandBuffer();
+    void CreateCommandBuffers();
     void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
     void CreateSyncObjects();
@@ -75,6 +79,8 @@ class Renderer
     VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, GLFWwindow *window);
 
   private:
+    GLFWwindow* m_window;
+
     VkInstance m_vkInstance;
     VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
     VkDevice m_device;
@@ -94,11 +100,18 @@ class Renderer
     VkPipeline m_graphicsPipeline;
 
     VkCommandPool m_commandPool;
-    VkCommandBuffer m_commandBuffer;
 
-    VkSemaphore m_imageAvailableSemaphore;
-    VkSemaphore m_renderFinishedSemaphore;
-    VkFence m_inFlightFence;
+    std::vector<VkCommandBuffer> m_commandBuffers;
+
+    std::vector<VkSemaphore> m_imageAvailableSemaphores;
+    std::vector<VkSemaphore> m_renderFinishedSemaphores;
+    std::vector<VkFence> m_inFlightFences;
+
+    bool framebufferResized = false;
+
+    int32_t m_currentFrame;
+
+    const int MAX_FRAMES_IN_FLIGHT = 2;
 };
 }// namespace CookEngine
 #endif// RENDERER_H

@@ -9,6 +9,7 @@ void EngineApi::Init()
     m_window = std::make_unique<Window>();
     m_renderer = std::make_unique<Renderer>();
     m_renderer->Init(m_window->GetHWND());
+    m_window->SetUserDataPtr(m_renderer->RefToBoolForResize());
 }
 
 void EngineApi::Deinit() { m_renderer->Deinit(); }

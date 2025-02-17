@@ -11,51 +11,68 @@ namespace CookEngine {
 
 void Renderer::Init(GLFWwindow *window)
 {
+    m_window = window;
+
     spdlog::info("Reneder Init");
     CreateInstance();
-    CreateSurface(window);
+    CreateSurface(m_window);
     CreatePhysicalDevice();
     CreateLogicalDevice();
-    auto format = CreateSwapchain(window);
+    auto format = CreateSwapchain(m_window);
     CreateImageView(format);
     CreateRenderPass(format);
     CreateGraphicsPipeline();
     CreateFramebuffers();
     CreateCommandPool();
-    CreateCommandBuffer();
+    CreateCommandBuffers();
     CreateSyncObjects();
+
+    m_currentFrame = 0;
 }
 
 void Renderer::DrawFrame()
 {
-    vkWaitForFences(m_device, 1, &m_inFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(m_device, 1, &m_inFlightFence);
+    vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(
+      m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE, &imageIndex);
 
-    vkResetCommandBuffer(m_commandBuffer, 0);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || framebufferResized) {
+        framebufferResized = false;
+        RecreateSwapchain();
+        return;
+    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        spdlog::error("Failed to acquire swap chain image!");
+        return;
+    }
 
-    RecordCommandBuffer(m_commandBuffer, imageIndex);
+    vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
+
+    vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0);
+
+    RecordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphore };
+    VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &m_commandBuffer;
+    submitInfo.pCommandBuffers = &m_commandBuffers[m_currentFrame];
 
-    VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphore };
+    VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFrame] };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFence) != VK_SUCCESS) {
+
+    if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]) != VK_SUCCESS) {
         spdlog::error("Failed to submit draw command buffer!");
     }
+
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -66,9 +83,17 @@ void Renderer::DrawFrame()
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
-    presentInfo.pResults = nullptr; // Optional
+    presentInfo.pResults = nullptr;// Optional
 
-    vkQueuePresentKHR(m_presentQueue, &presentInfo);
+    result = vkQueuePresentKHR(m_presentQueue, &presentInfo);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
+        framebufferResized = false;
+        RecreateSwapchain();
+    } else if (result != VK_SUCCESS) {
+        spdlog::error("Failed to present swap chain image!");
+    }
+    m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void Renderer::Deinit()
@@ -87,6 +112,11 @@ void Renderer::Deinit()
     DestroyDevice();
     DestroySurface();
     DestroyInstance();
+}
+
+bool& Renderer::RefToBoolForResize()
+{
+    return framebufferResized;
 }
 
 void Renderer::CreateInstance()
@@ -240,7 +270,6 @@ void Renderer::CreateSurface(GLFWwindow *window)
 
 VkFormat Renderer::CreateSwapchain(GLFWwindow *window)
 {
-
     SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport();
 
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -280,6 +309,22 @@ VkFormat Renderer::CreateSwapchain(GLFWwindow *window)
     spdlog::info("Swapchain created successfully");
 
     return surfaceFormat.format;
+}
+
+void Renderer::CleanupSwapchain() {
+    DestroyFramebuffers();
+    DestroyImageView();
+    DestroySwapchain();
+}
+
+void Renderer::RecreateSwapchain() {
+    vkDeviceWaitIdle(m_device);
+
+    CleanupSwapchain();
+
+    auto format = CreateSwapchain(m_window);
+    CreateImageView(format);
+    CreateFramebuffers();
 }
 
 void Renderer::CreateImageView(const VkFormat &format)
@@ -553,15 +598,17 @@ void Renderer::CreateCommandPool()
     }
 }
 
-void Renderer::CreateCommandBuffer()
+void Renderer::CreateCommandBuffers()
 {
+    m_commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = m_commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
+    allocInfo.commandBufferCount = static_cast<uint32_t>(m_commandBuffers.size());
 
-    if (vkAllocateCommandBuffers(m_device, &allocInfo, &m_commandBuffer) == VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data()) == VK_SUCCESS) {
         spdlog::info("Command buffers created successfully");
     }
 }
@@ -615,6 +662,10 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
 void Renderer::CreateSyncObjects()
 {
+    m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -622,10 +673,12 @@ void Renderer::CreateSyncObjects()
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    if (vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphore) != VK_SUCCESS
-        || vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphore) != VK_SUCCESS
-        || vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFence) != VK_SUCCESS) {
-        spdlog::error("Failed to create semaphores!");
+    for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        if (vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i]) != VK_SUCCESS
+            || vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]) != VK_SUCCESS
+            || vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]) != VK_SUCCESS) {
+            spdlog::error("Failed to create semaphores!");
+        }
     }
 }
 
@@ -722,8 +775,10 @@ void Renderer::DestroyCommandPool() { vkDestroyCommandPool(m_device, m_commandPo
 
 void Renderer::DestroySyncObjects()
 {
-    vkDestroySemaphore(m_device, m_imageAvailableSemaphore, nullptr);
-    vkDestroySemaphore(m_device, m_renderFinishedSemaphore, nullptr);
-    vkDestroyFence(m_device, m_inFlightFence, nullptr);
+    for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkDestroySemaphore(m_device, m_imageAvailableSemaphores[i], nullptr);
+        vkDestroySemaphore(m_device, m_renderFinishedSemaphores[i], nullptr);
+        vkDestroyFence(m_device, m_inFlightFences[i], nullptr);
+    }
 }
 }// namespace CookEngine

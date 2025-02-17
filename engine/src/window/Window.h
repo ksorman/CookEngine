@@ -15,6 +15,9 @@ class Window
     void Loop();
     GLFWwindow *GetHWND();
 
+    void SetUserDataPtr(bool& data);
+    static void ResizeHandel(GLFWwindow *window, int width, int height);
+
   public:
     static const uint32_t WIDTH = 800;
     static const uint32_t HEIGHT = 600;
