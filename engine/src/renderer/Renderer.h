@@ -82,6 +82,8 @@ class Renderer
     void CreateImageView(const VkFormat& format);
 
     void CreateVertexBuffer();
+    void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     
     void CreateFramebuffers();
     void CreateGraphicsPipeline();
