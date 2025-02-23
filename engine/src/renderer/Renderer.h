@@ -125,6 +125,10 @@ class Renderer
     void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
     void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
+    void CreateTextureImageView();
+    VkImageView CreateImageView(VkImage image, VkFormat format);
+
+    void CreateTextureSampler();
     static std::vector<char> ReadFile(const std::string &filename);
 
     void DestroyInstance();
@@ -145,6 +149,8 @@ class Renderer
     void DestroyUniformBuffer();
     void DestroyDescriptorPool();
     void DestroyDescriptorSets();
+    void DestroyTextureImageView();
+    void DestroyTextureSampler();
     QueueFamilyIndices ChooseQueue();
     SwapChainSupportDetails QuerySwapChainSupport();
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
@@ -200,6 +206,9 @@ class Renderer
 
     VkImage m_textureImage;
     VkDeviceMemory m_textureImageMemory;
+    VkImageView m_textureImageView;
+
+    VkSampler m_textureSampler;
 
     const int MAX_FRAMES_IN_FLIGHT = 2;
 };

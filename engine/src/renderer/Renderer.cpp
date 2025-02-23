@@ -43,6 +43,8 @@ void Renderer::Init(GLFWwindow *window)
     CreateIndexBuffer();
     CreateUniformBuffers();
     CreateTextureImage();
+    CreateTextureImageView();
+    CreateTextureSampler();
     CreateDescriptorPool();
     CreateDescriptorSets();
     CreateCommandBuffers();
@@ -126,6 +128,8 @@ void Renderer::Deinit()
     DestroySyncObjects();
     DestroyDescriptorSetLayout();
     DestroyDescriptorPool();
+    DestroyTextureSampler();
+    DestroyTextureImageView();
     DestroyTextureImage();
     DestroyUniformBuffer();
     DestroyIndexBuffer();
@@ -399,21 +403,7 @@ void Renderer::CreateImageView(const VkFormat &format)
     };
 
     for (size_t i = 0; i < m_swapChainImages.size(); i++) {
-        VkImageViewCreateInfo imageViewInfo{ .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .pNext = nullptr,
-            .image = m_swapChainImages[i],
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = format,
-            .components = { VK_COMPONENT_SWIZZLE_IDENTITY,
-              VK_COMPONENT_SWIZZLE_IDENTITY,
-              VK_COMPONENT_SWIZZLE_IDENTITY,
-              VK_COMPONENT_SWIZZLE_IDENTITY },
-            .subresourceRange = subresourceRange };
-
-        if (vkCreateImageView(m_device, &imageViewInfo, nullptr, &m_swapChainImageViews[i]) != VK_SUCCESS) {
-            spdlog::error("ImageView for swapchain didnt created!");
-            return;
-        }
+        m_swapChainImageViews[i] = CreateImageView(m_swapChainImages[i], format);
     }
     spdlog::info("ImageView for swapchain successfully created");
 }
@@ -1094,6 +1084,60 @@ void Renderer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
     EndSingleTimeCommands(commandBuffer);
 }
 
+void Renderer::CreateTextureImageView()
+{
+    m_textureImageView = CreateImageView(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB);
+}
+
+VkImageView Renderer::CreateImageView(VkImage image, VkFormat format)
+{
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = image;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = format;
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    VkImageView imageView;
+    if (vkCreateImageView(m_device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+        spdlog::error("Failed to create texture image view!");
+    }
+
+    return imageView;
+}
+
+void Renderer::CreateTextureSampler()
+{
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(m_physicalDevice, &properties);
+
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
+
+    if (vkCreateSampler(m_device, &samplerInfo, nullptr, &m_textureSampler) != VK_SUCCESS) {
+        spdlog::error("Failed to create texture sampler!");
+    }
+}
+
 void Renderer::CreateImage(uint32_t width,
   uint32_t height,
   VkFormat format,
@@ -1158,10 +1202,10 @@ std::vector<char> Renderer::ReadFile(const std::string &filename)
 
 void Renderer::CreateLogicalDevice()
 {
-
     VkPhysicalDeviceFeatures supportedFeatures;
     vkGetPhysicalDeviceFeatures(m_physicalDevice, &supportedFeatures);
 
+    supportedFeatures.samplerAnisotropy = VK_TRUE;
     auto queueFamilyIndices = ChooseQueue();
     if (!queueFamilyIndices.isComplete()) {
         spdlog::error("Choosing Queue is faild!");
@@ -1268,4 +1312,8 @@ void Renderer::DestroyUniformBuffer()
 void Renderer::DestroyDescriptorPool() { vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr); }
 
 void Renderer::DestroyDescriptorSets() { vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr); }
+
+void Renderer::DestroyTextureImageView() { vkDestroyImageView(m_device, m_textureImageView, nullptr); }
+
+void Renderer::DestroyTextureSampler() { vkDestroySampler(m_device, m_textureSampler, nullptr); }
 }// namespace CookEngine
