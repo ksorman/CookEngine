@@ -1,6 +1,7 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -47,6 +48,12 @@ struct Vertex
     }
 };
 
+struct UniformBufferObject {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
+};
+
 struct QueueFamilyIndices
 {
     std::optional<uint32_t> graphicsFamily;
@@ -72,6 +79,8 @@ class Renderer
     bool& RefToBoolForResize();
 
   private:
+    void UpdateUniformBuffer(uint32_t currentFrame);
+
     void CreateInstance();
     void CreatePhysicalDevice();
     void CreateLogicalDevice();
@@ -83,10 +92,12 @@ class Renderer
 
     void CreateVertexBuffer();
     void CreateIndexBuffer();
+    void CreateUniformBuffers();
     void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     
     void CreateFramebuffers();
+    void CreateDescriptorSetLayout();
     void CreateGraphicsPipeline();
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
     void CreateRenderPass(const VkFormat& format);
@@ -94,6 +105,9 @@ class Renderer
     void CreateCommandPool();
     void CreateCommandBuffers();
     void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+    void CreateDescriptorPool();
+    void CreateDescriptorSets();
 
     void CreateSyncObjects();
 
@@ -107,11 +121,15 @@ class Renderer
     void DestroyFramebuffers();
     void DestroyRenderPass();
     void DestroyPipelineLayout();
+    void DestroyDescriptorSetLayout();
     void DestroyPipeline();
     void DestroyCommandPool();
     void DestroySyncObjects();
     void DestroyVertexBuffer();
     void DestroyIndexBuffer();
+    void DestroyUniformBuffer();
+    void DestroyDescriptorPool();
+    void DestroyDescriptorSets();
     QueueFamilyIndices ChooseQueue();
     SwapChainSupportDetails QuerySwapChainSupport();
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
@@ -136,6 +154,7 @@ class Renderer
     std::vector<VkFramebuffer> m_swapChainFramebuffers;
 
     VkRenderPass m_renderPass;
+    VkDescriptorSetLayout m_descriptorSetLayout;
     VkPipelineLayout m_pipelineLayout;
 
     VkPipeline m_graphicsPipeline;
@@ -156,6 +175,13 @@ class Renderer
     VkDeviceMemory m_vertexBufferMemory;
     VkBuffer m_indexBuffer;
     VkDeviceMemory m_indexBufferMemory;
+
+    VkDescriptorPool m_descriptorPool;
+    std::vector<VkDescriptorSet> m_descriptorSets;
+
+    std::vector<VkBuffer> m_uniformBuffers;
+    std::vector<VkDeviceMemory> m_uniformBuffersMemory;
+    std::vector<void *> m_uniformBuffersMapped;
 
     const int MAX_FRAMES_IN_FLIGHT = 2;
 };
