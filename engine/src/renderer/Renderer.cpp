@@ -10,19 +10,17 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <stb_image.h>
+
 #include <chrono>
 
 namespace CookEngine {
-const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
-};
+const std::vector<Vertex> vertices = { { { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
+    { { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f } },
+    { { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } },
+    { { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f } } };
 
-const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0
-};
+const std::vector<uint16_t> indices = { 0, 1, 2, 2, 3, 0 };
 
 void Renderer::Init(GLFWwindow *window)
 {
@@ -142,10 +140,7 @@ void Renderer::Deinit()
     DestroyInstance();
 }
 
-bool& Renderer::RefToBoolForResize()
-{
-    return framebufferResized;
-}
+bool &Renderer::RefToBoolForResize() { return framebufferResized; }
 
 void Renderer::UpdateUniformBuffer(uint32_t currentFrame)
 {
@@ -370,13 +365,15 @@ VkFormat Renderer::CreateSwapchain(GLFWwindow *window)
     return surfaceFormat.format;
 }
 
-void Renderer::CleanupSwapchain() {
+void Renderer::CleanupSwapchain()
+{
     DestroyFramebuffers();
     DestroyImageView();
     DestroySwapchain();
 }
 
-void Renderer::RecreateSwapchain() {
+void Renderer::RecreateSwapchain()
+{
     vkDeviceWaitIdle(m_device);
 
     CleanupSwapchain();
@@ -884,7 +881,14 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
     vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descriptorSets[m_currentFrame], 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer,
+      VK_PIPELINE_BIND_POINT_GRAPHICS,
+      m_pipelineLayout,
+      0,
+      1,
+      &m_descriptorSets[m_currentFrame],
+      0,
+      nullptr);
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
@@ -938,8 +942,8 @@ void Renderer::CreateDescriptorSets()
         descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrite.descriptorCount = 1;
         descriptorWrite.pBufferInfo = &bufferInfo;
-        descriptorWrite.pImageInfo = nullptr; // Optional
-        descriptorWrite.pTexelBufferView = nullptr; // Optional
+        descriptorWrite.pImageInfo = nullptr;// Optional
+        descriptorWrite.pTexelBufferView = nullptr;// Optional
         vkUpdateDescriptorSets(m_device, 1, &descriptorWrite, 0, nullptr);
     }
 }
@@ -1088,13 +1092,7 @@ void Renderer::DestroyUniformBuffer()
     }
 }
 
-void Renderer::DestroyDescriptorPool()
-{
-    vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
-}
+void Renderer::DestroyDescriptorPool() { vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr); }
 
-void Renderer::DestroyDescriptorSets()
-{
-    vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
-}
+void Renderer::DestroyDescriptorSets() { vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr); }
 }// namespace CookEngine
