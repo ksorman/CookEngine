@@ -105,13 +105,27 @@ class Renderer
     void CreateCommandPool();
     void CreateCommandBuffers();
     void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+    VkCommandBuffer BeginSingleTimeCommands();
+    void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
     void CreateDescriptorPool();
     void CreateDescriptorSets();
 
     void CreateSyncObjects();
 
-    static std::vector<char> ReadFile(const std::string& filename);
+    void CreateTextureImage();
+    void CreateImage(uint32_t width,
+      uint32_t height,
+      VkFormat format,
+      VkImageTiling tiling,
+      VkImageUsageFlags usage,
+      VkMemoryPropertyFlags properties,
+      VkImage &image,
+      VkDeviceMemory &imageMemory);
+    void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+    static std::vector<char> ReadFile(const std::string &filename);
 
     void DestroyInstance();
     void DestroySurface();
@@ -125,6 +139,7 @@ class Renderer
     void DestroyPipeline();
     void DestroyCommandPool();
     void DestroySyncObjects();
+    void DestroyTextureImage();
     void DestroyVertexBuffer();
     void DestroyIndexBuffer();
     void DestroyUniformBuffer();
@@ -182,6 +197,9 @@ class Renderer
     std::vector<VkBuffer> m_uniformBuffers;
     std::vector<VkDeviceMemory> m_uniformBuffersMemory;
     std::vector<void *> m_uniformBuffersMapped;
+
+    VkImage m_textureImage;
+    VkDeviceMemory m_textureImageMemory;
 
     const int MAX_FRAMES_IN_FLIGHT = 2;
 };
