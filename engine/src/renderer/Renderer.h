@@ -82,6 +82,7 @@ class Renderer
     void CreateImageView(const VkFormat& format);
 
     void CreateVertexBuffer();
+    void CreateIndexBuffer();
     void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     
@@ -110,6 +111,7 @@ class Renderer
     void DestroyCommandPool();
     void DestroySyncObjects();
     void DestroyVertexBuffer();
+    void DestroyIndexBuffer();
     QueueFamilyIndices ChooseQueue();
     SwapChainSupportDetails QuerySwapChainSupport();
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
@@ -152,6 +154,8 @@ class Renderer
 
     VkBuffer m_vertexBuffer;
     VkDeviceMemory m_vertexBufferMemory;
+    VkBuffer m_indexBuffer;
+    VkDeviceMemory m_indexBufferMemory;
 
     const int MAX_FRAMES_IN_FLIGHT = 2;
 };

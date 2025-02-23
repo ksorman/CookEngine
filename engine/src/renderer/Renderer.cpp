@@ -7,10 +7,15 @@
 #include <vulkan/vulkan_core.h>
 
 namespace CookEngine {
-    const std::vector<Vertex> vertices = {
-    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+const std::vector<Vertex> vertices = {
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+};
+
+const std::vector<uint16_t> indices = {
+    0, 1, 2, 2, 3, 0
 };
 
 void Renderer::Init(GLFWwindow *window)
@@ -29,6 +34,7 @@ void Renderer::Init(GLFWwindow *window)
     CreateFramebuffers();
     CreateCommandPool();
     CreateVertexBuffer();
+    CreateIndexBuffer();
     CreateCommandBuffers();
     CreateSyncObjects();
 
@@ -107,6 +113,7 @@ void Renderer::Deinit()
 
     spdlog::info("Reneder Deinit");
     DestroySyncObjects();
+    DestroyIndexBuffer();
     DestroyVertexBuffer();
     DestroyCommandPool();
     DestroyFramebuffers();
@@ -403,6 +410,35 @@ void Renderer::CreateVertexBuffer()
       m_vertexBufferMemory);
 
     CopyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
+
+    vkDestroyBuffer(m_device, stagingBuffer, nullptr);
+    vkFreeMemory(m_device, stagingBufferMemory, nullptr);
+}
+
+void Renderer::CreateIndexBuffer()
+{
+    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    CreateBuffer(bufferSize,
+      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+      stagingBuffer,
+      stagingBufferMemory);
+
+    void *data;
+    vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, indices.data(), (size_t)bufferSize);
+    vkUnmapMemory(m_device, stagingBufferMemory);
+
+    CreateBuffer(bufferSize,
+      VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+      m_indexBuffer,
+      m_indexBufferMemory);
+
+    CopyBuffer(stagingBuffer, m_indexBuffer, bufferSize);
 
     vkDestroyBuffer(m_device, stagingBuffer, nullptr);
     vkFreeMemory(m_device, stagingBufferMemory, nullptr);
@@ -773,10 +809,12 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     VkBuffer vertexBuffers[] = { m_vertexBuffer };
-    VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+    VkDeviceSize offsetsVertex[] = { 0 };
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsetsVertex);
 
-    vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
 
@@ -909,5 +947,11 @@ void Renderer::DestroyVertexBuffer()
 {
     vkDestroyBuffer(m_device, m_vertexBuffer, nullptr);
     vkFreeMemory(m_device, m_vertexBufferMemory, nullptr);
+}
+
+void Renderer::DestroyIndexBuffer()
+{
+    vkDestroyBuffer(m_device, m_indexBuffer, nullptr);
+    vkFreeMemory(m_device, m_indexBufferMemory, nullptr);
 }
 }// namespace CookEngine
