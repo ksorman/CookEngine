@@ -1,10 +1,12 @@
 #include "Renderer.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <set>
 #include <spdlog/spdlog.h>
 #include <vulkan/vulkan_core.h>
+
 
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
