@@ -217,6 +217,9 @@ class Renderer
     VkSampler m_textureSampler;
 
     const int MAX_FRAMES_IN_FLIGHT = 2;
+
+    const std::string PATH_TO_SHADER_FOLDER = "./../engine/shaders";
+    const std::string PATH_TO_ASSETS_FOLDER = "./../engine/assets";
 };
 }// namespace CookEngine
 #endif// RENDERER_H

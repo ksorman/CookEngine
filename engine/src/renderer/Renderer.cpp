@@ -583,9 +583,8 @@ void Renderer::CreateDescriptorSetLayout()
 
 void Renderer::CreateGraphicsPipeline()
 {
-    // TODO(Change path) Change those paths
-    auto vertShaderCode = ReadFile("D:/CookEngine/engine/src/renderer/shaders/triangleVS.spv");
-    auto pixelShaderCode = ReadFile("D:/CookEngine/engine/src/renderer/shaders/trianglePS.spv");
+    auto vertShaderCode = ReadFile(PATH_TO_SHADER_FOLDER + "/triangleVS.spv");
+    auto pixelShaderCode = ReadFile(PATH_TO_SHADER_FOLDER + "/trianglePS.spv");
 
     VkShaderModule vertShaderModule = CreateShaderModule(vertShaderCode);
     VkShaderModule pixelShaderModule = CreateShaderModule(pixelShaderCode);
@@ -1008,9 +1007,9 @@ void Renderer::CreateTextureImage()
     int texHeight;
     int texChannels;
 
-    //TODO(Kostia) Fix hard code
-    stbi_uc* pixels = stbi_load("D:/CookEngine/engine/assets/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-    VkDeviceSize imageSize = texWidth * texHeight * 4;
+    const std::string PATH_TO_IMAGE = PATH_TO_ASSETS_FOLDER + "/texture.jpg";
+    stbi_uc* pixels = stbi_load(PATH_TO_IMAGE.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    VkDeviceSize imageSize = static_cast<VkDeviceSize>(texWidth) * texHeight * 4;
 
     if (!pixels) {
         spdlog::error("Failed to load texture image!");
