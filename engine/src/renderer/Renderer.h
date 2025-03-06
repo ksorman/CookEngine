@@ -1,11 +1,12 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
-#include <array>
+
 #define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
@@ -18,12 +19,14 @@
 
 namespace CookEngine {
 
-struct Vertex {
+struct Vertex
+{
     glm::vec2 pos;
     glm::vec3 color;
     glm::vec2 texCoord;
 
-    static VkVertexInputBindingDescription getBindingDescription() {
+    static VkVertexInputBindingDescription getBindingDescription()
+    {
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 0;
         bindingDescription.stride = sizeof(Vertex);
@@ -32,7 +35,8 @@ struct Vertex {
         return bindingDescription;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
+    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions()
+    {
         std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
 
         attributeDescriptions[0].binding = 0;
@@ -54,7 +58,8 @@ struct Vertex {
     }
 };
 
-struct UniformBufferObject {
+struct UniformBufferObject
+{
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 proj;
@@ -78,7 +83,7 @@ struct SwapChainSupportDetails
 class Renderer
 {
   public:
-    void Init(GLFWwindow *window);
+    void Init(GLFWwindow* window);
     void DrawFrame();
     void Deinit();
 
@@ -90,18 +95,26 @@ class Renderer
     void CreateInstance();
     void CreatePhysicalDevice();
     void CreateLogicalDevice();
-    void CreateSurface(GLFWwindow *window);
-    VkFormat CreateSwapchain(GLFWwindow *window);
+    void CreateSurface(GLFWwindow* window);
+    VkFormat CreateSwapchain(GLFWwindow* window);
     void CleanupSwapchain();
     void RecreateSwapchain();
     void CreateImageView(const VkFormat& format);
 
+    VkFormat
+      FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+    VkFormat FindDepthFormat();
+
     void CreateVertexBuffer();
     void CreateIndexBuffer();
     void CreateUniformBuffers();
-    void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    void CreateBuffer(VkDeviceSize size,
+      VkBufferUsageFlags usage,
+      VkMemoryPropertyFlags properties,
+      VkBuffer& buffer,
+      VkDeviceMemory& bufferMemory);
     void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-    
+
     void CreateFramebuffers();
     void CreateDescriptorSetLayout();
     void CreateGraphicsPipeline();
@@ -119,6 +132,7 @@ class Renderer
 
     void CreateSyncObjects();
 
+    void CreateDepthBuffer();
     void CreateTextureImage();
     void CreateImage(uint32_t width,
       uint32_t height,
@@ -126,16 +140,18 @@ class Renderer
       VkImageTiling tiling,
       VkImageUsageFlags usage,
       VkMemoryPropertyFlags properties,
-      VkImage &image,
-      VkDeviceMemory &imageMemory);
+      VkImage& image,
+      VkDeviceMemory& imageMemory);
+    bool HasStencilComponent(VkFormat format);
     void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
     void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
+    void CreateDepthBufferView();
     void CreateTextureImageView();
-    VkImageView CreateImageView(VkImage image, VkFormat format);
+    VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectMask);
 
     void CreateTextureSampler();
-    static std::vector<char> ReadFile(const std::string &filename);
+    static std::vector<char> ReadFile(const std::string& filename);
 
     void DestroyInstance();
     void DestroySurface();
@@ -156,12 +172,15 @@ class Renderer
     void DestroyDescriptorPool();
     void DestroyDescriptorSets();
     void DestroyTextureImageView();
+    void DestroyDepthBufferView();
     void DestroyTextureSampler();
+    void DestroyDepthBuffer();
+
     QueueFamilyIndices ChooseQueue();
     SwapChainSupportDetails QuerySwapChainSupport();
-    VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
-    VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes);
-    VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, GLFWwindow *window);
+    VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+    VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+    VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* window);
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
   private:
@@ -208,7 +227,7 @@ class Renderer
 
     std::vector<VkBuffer> m_uniformBuffers;
     std::vector<VkDeviceMemory> m_uniformBuffersMemory;
-    std::vector<void *> m_uniformBuffersMapped;
+    std::vector<void*> m_uniformBuffersMapped;
 
     VkImage m_textureImage;
     VkDeviceMemory m_textureImageMemory;
@@ -216,10 +235,14 @@ class Renderer
 
     VkSampler m_textureSampler;
 
+    VkImage m_depthBuffer;
+    VkDeviceMemory m_depthBufferMemory;
+    VkImageView m_depthBufferView;
+
     const int MAX_FRAMES_IN_FLIGHT = 2;
 
-    const std::string PATH_TO_SHADER_FOLDER = "./../engine/shaders";
-    const std::string PATH_TO_ASSETS_FOLDER = "./../engine/assets";
+    const std::string PATH_TO_SHADER_FOLDER = "./../../engine/shaders";
+    const std::string PATH_TO_ASSETS_FOLDER = "./../../engine/assets";
 };
 }// namespace CookEngine
 #endif// RENDERER_H
