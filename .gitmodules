@@ -10,3 +10,6 @@
 [submodule "engine/externals/glfw"]
 	path = engine/externals/glfw
 	url = https://github.com/glfw/glfw
+[submodule "engine/externals/assimp"]
+	path = engine/externals/assimp
+	url = https://github.com/assimp/assimp.git
