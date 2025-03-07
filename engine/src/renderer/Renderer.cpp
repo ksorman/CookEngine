@@ -156,7 +156,10 @@ void Renderer::Deinit()
     DestroyInstance();
 }
 
-bool& Renderer::RefToBoolForResize() { return framebufferResized; }
+bool& Renderer::RefToBoolForResize()
+{
+    return framebufferResized;
+}
 
 void Renderer::UpdateUniformBuffer(uint32_t currentFrame)
 {
@@ -214,7 +217,9 @@ void Renderer::CreatePhysicalDevice()
 {
     uint32_t numDevices = 0;
     auto vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &numDevices, nullptr);
-    if (vkResult != VK_SUCCESS) { spdlog::error("Devices not found"); }
+    if (vkResult != VK_SUCCESS) {
+        spdlog::error("Devices not found");
+    }
 
     if (numDevices > 0) {
         std::vector<VkPhysicalDevice> devices(numDevices);
@@ -245,10 +250,17 @@ QueueFamilyIndices Renderer::ChooseQueue()
         uint32_t i = 0;
         for (const auto& queueFamily : queuesFamilies) {
             VkBool32 presentSupport = false;
-            if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) { indexes.graphicsFamily = i; }
+            if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                indexes.graphicsFamily = i;
+            }
 
+            // TODO(Kostia) In original execution queue family with index 3 dosnt support Surface
+            // But in RenderDoc it supports, so in RenderDoc drawing dosnt work
             vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice, i, m_surface, &presentSupport);
-            if (presentSupport) { indexes.presentFamily = i; }
+            // if (presentSupport) { indexes.presentFamily = i; }
+            if (presentSupport && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                indexes.presentFamily = i;
+            }
             i++;
         }
     }
@@ -335,7 +347,9 @@ void Renderer::CreateSurface(GLFWwindow* window)
     createInfo.hwnd = glfwGetWin32Window(window);
     createInfo.hinstance = GetModuleHandle(nullptr);
     auto vkResult = vkCreateWin32SurfaceKHR(m_vkInstance, &createInfo, nullptr, &m_surface);
-    if (vkResult != VK_SUCCESS) { spdlog::error("Creating surface failed"); }
+    if (vkResult != VK_SUCCESS) {
+        spdlog::error("Creating surface failed");
+    }
 }
 
 VkFormat Renderer::CreateSwapchain(GLFWwindow* window)
@@ -944,7 +958,9 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
     vkCmdEndRenderPass(commandBuffer);
 
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) { spdlog::error("Failed to record command buffer!"); }
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        spdlog::error("Failed to record command buffer!");
+    }
 }
 
 VkCommandBuffer Renderer::BeginSingleTimeCommands()
@@ -1096,7 +1112,9 @@ void Renderer::CreateTextureImage()
     stbi_uc* pixels = stbi_load(PATH_TO_IMAGE.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     VkDeviceSize imageSize = static_cast<VkDeviceSize>(texWidth) * texHeight * 4;
 
-    if (!pixels) { spdlog::error("Failed to load texture image!"); }
+    if (!pixels) {
+        spdlog::error("Failed to load texture image!");
+    }
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -1161,7 +1179,9 @@ void Renderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayo
     VkPipelineStageFlags destinationStage;
     if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        if (HasStencilComponent(format)) { barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT; }
+        if (HasStencilComponent(format)) {
+            barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
     } else {
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     }
@@ -1376,38 +1396,71 @@ void Renderer::CreateLogicalDevice()
         .pEnabledFeatures = &supportedFeatures };
 
     auto vkResult = vkCreateDevice(m_physicalDevice, &deviceInfo, nullptr, &m_device);
-    if (vkResult == VK_SUCCESS) { spdlog::info("vkDevice was created successfully"); }
+    if (vkResult == VK_SUCCESS) {
+        spdlog::info("vkDevice was created successfully");
+    }
 
     vkGetDeviceQueue(m_device, queueFamilyIndices.graphicsFamily.value(), 0, &m_graphicsQueue);
     vkGetDeviceQueue(m_device, queueFamilyIndices.presentFamily.value(), 0, &m_presentQueue);
 }
 
-void Renderer::DestroyInstance() { vkDestroyInstance(m_vkInstance, nullptr); }
+void Renderer::DestroyInstance()
+{
+    vkDestroyInstance(m_vkInstance, nullptr);
+}
 
-void Renderer::DestroySurface() { vkDestroySurfaceKHR(m_vkInstance, m_surface, nullptr); }
+void Renderer::DestroySurface()
+{
+    vkDestroySurfaceKHR(m_vkInstance, m_surface, nullptr);
+}
 
-void Renderer::DestroyDevice() { vkDestroyDevice(m_device, nullptr); }
+void Renderer::DestroyDevice()
+{
+    vkDestroyDevice(m_device, nullptr);
+}
 
-void Renderer::DestroySwapchain() { vkDestroySwapchainKHR(m_device, m_swapChain, nullptr); }
+void Renderer::DestroySwapchain()
+{
+    vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
+}
 
 void Renderer::DestroyImageView()
 {
-    for (auto imageView : m_swapChainImageViews) { vkDestroyImageView(m_device, imageView, nullptr); }
+    for (auto imageView : m_swapChainImageViews) {
+        vkDestroyImageView(m_device, imageView, nullptr);
+    }
 }
 void Renderer::DestroyFramebuffers()
 {
-    for (auto framebuffer : m_swapChainFramebuffers) { vkDestroyFramebuffer(m_device, framebuffer, nullptr); }
+    for (auto framebuffer : m_swapChainFramebuffers) {
+        vkDestroyFramebuffer(m_device, framebuffer, nullptr);
+    }
 }
 
-void Renderer::DestroyPipelineLayout() { vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr); }
+void Renderer::DestroyPipelineLayout()
+{
+    vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
+}
 
-void Renderer::DestroyDescriptorSetLayout() { vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr); }
+void Renderer::DestroyDescriptorSetLayout()
+{
+    vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
+}
 
-void Renderer::DestroyPipeline() { vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr); }
+void Renderer::DestroyPipeline()
+{
+    vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
+}
 
-void Renderer::DestroyRenderPass() { vkDestroyRenderPass(m_device, m_renderPass, nullptr); }
+void Renderer::DestroyRenderPass()
+{
+    vkDestroyRenderPass(m_device, m_renderPass, nullptr);
+}
 
-void Renderer::DestroyCommandPool() { vkDestroyCommandPool(m_device, m_commandPool, nullptr); }
+void Renderer::DestroyCommandPool()
+{
+    vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+}
 
 void Renderer::DestroySyncObjects()
 {
@@ -1444,15 +1497,30 @@ void Renderer::DestroyUniformBuffer()
     }
 }
 
-void Renderer::DestroyDescriptorPool() { vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr); }
+void Renderer::DestroyDescriptorPool()
+{
+    vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
+}
 
-void Renderer::DestroyDescriptorSets() { vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr); }
+void Renderer::DestroyDescriptorSets()
+{
+    vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
+}
 
-void Renderer::DestroyTextureImageView() { vkDestroyImageView(m_device, m_textureImageView, nullptr); }
+void Renderer::DestroyTextureImageView()
+{
+    vkDestroyImageView(m_device, m_textureImageView, nullptr);
+}
 
-void Renderer::DestroyDepthBufferView() { vkDestroyImageView(m_device, m_depthBufferView, nullptr); }
+void Renderer::DestroyDepthBufferView()
+{
+    vkDestroyImageView(m_device, m_depthBufferView, nullptr);
+}
 
-void Renderer::DestroyTextureSampler() { vkDestroySampler(m_device, m_textureSampler, nullptr); }
+void Renderer::DestroyTextureSampler()
+{
+    vkDestroySampler(m_device, m_textureSampler, nullptr);
+}
 
 void Renderer::DestroyDepthBuffer()
 {
