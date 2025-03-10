@@ -13,3 +13,6 @@
 [submodule "engine/externals/assimp"]
 	path = engine/externals/assimp
 	url = https://github.com/assimp/assimp.git
+[submodule "engine/externals/vma"]
+	path = engine/externals/vma
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git

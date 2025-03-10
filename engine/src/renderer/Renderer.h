@@ -11,10 +11,9 @@
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
 #define GLFW_EXPOSE_NATIVE_WIN32
-#include "glm/glm.hpp"
+#include <glm/glm.hpp>
 #include <GLFW/glfw3native.h>
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_core.h>
+#include "VmaUsage.h"
 
 
 namespace CookEngine {
@@ -95,6 +94,7 @@ class Renderer
     void CreateInstance();
     void CreatePhysicalDevice();
     void CreateLogicalDevice();
+    bool CreateVMAAllocator();
     void CreateSurface(GLFWwindow* window);
     VkFormat CreateSwapchain(GLFWwindow* window);
     void CleanupSwapchain();
@@ -108,11 +108,11 @@ class Renderer
     void CreateVertexBuffer();
     void CreateIndexBuffer();
     void CreateUniformBuffers();
-    void CreateBuffer(VkDeviceSize size,
+    bool CreateBuffer(VkDeviceSize size,
       VkBufferUsageFlags usage,
       VkMemoryPropertyFlags properties,
       VkBuffer& buffer,
-      VkDeviceMemory& bufferMemory);
+      VmaAllocation& bufferAllocation);
     void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
     void CreateFramebuffers();
@@ -134,14 +134,14 @@ class Renderer
 
     void CreateDepthBuffer();
     void CreateTextureImage();
-    void CreateImage(uint32_t width,
+    bool CreateImage(uint32_t width,
       uint32_t height,
       VkFormat format,
       VkImageTiling tiling,
       VkImageUsageFlags usage,
       VkMemoryPropertyFlags properties,
       VkImage& image,
-      VkDeviceMemory& imageMemory);
+      VmaAllocation& imageMemory);
     bool HasStencilComponent(VkFormat format);
     void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
     void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
@@ -175,6 +175,8 @@ class Renderer
     void DestroyDepthBufferView();
     void DestroyTextureSampler();
     void DestroyDepthBuffer();
+
+    void DestroyVMAAllocator();
 
     QueueFamilyIndices ChooseQueue();
     SwapChainSupportDetails QuerySwapChainSupport();
@@ -218,26 +220,28 @@ class Renderer
     int32_t m_currentFrame;
 
     VkBuffer m_vertexBuffer;
-    VkDeviceMemory m_vertexBufferMemory;
+    VmaAllocation m_vertexBufferMemory;
     VkBuffer m_indexBuffer;
-    VkDeviceMemory m_indexBufferMemory;
+    VmaAllocation m_indexBufferMemory;
 
     VkDescriptorPool m_descriptorPool;
     std::vector<VkDescriptorSet> m_descriptorSets;
 
     std::vector<VkBuffer> m_uniformBuffers;
-    std::vector<VkDeviceMemory> m_uniformBuffersMemory;
+    std::vector<VmaAllocation> m_uniformBuffersMemory;
     std::vector<void*> m_uniformBuffersMapped;
 
     VkImage m_textureImage;
-    VkDeviceMemory m_textureImageMemory;
+    VmaAllocation m_textureImageMemory;
     VkImageView m_textureImageView;
 
     VkSampler m_textureSampler;
 
     VkImage m_depthBuffer;
-    VkDeviceMemory m_depthBufferMemory;
+    VmaAllocation m_depthBufferMemory;
     VkImageView m_depthBufferView;
+
+    VmaAllocator m_vmaAllocator;
 
     const int MAX_FRAMES_IN_FLIGHT = 2;
 

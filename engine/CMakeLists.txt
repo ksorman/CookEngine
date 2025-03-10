@@ -11,10 +11,11 @@ add_subdirectory(externals/glm)
 add_subdirectory(externals/spdlog)
 add_subdirectory(externals/glfw)
 add_subdirectory(externals/assimp)
+add_subdirectory(externals/vma)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/shaders DESTINATION ${CMAKE_BINARY_DIR}/engine)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR}/engine)
 
 add_library(${LIB_NAME} STATIC ${HEADER_FILES} ${SRC_FILES})
-target_include_directories(CookEngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/externals/stb ${CMAKE_CURRENT_SOURCE_DIR}/externals/glm ${CMAKE_CURRENT_SOURCE_DIR}/externals/spdlog/include ${CMAKE_CURRENT_SOURCE_DIR}/externals/glfw/include ${CMAKE_CURRENT_SOURCE_DIR}/externals/stb ${CMAKE_CURRENT_SOURCE_DIR}/externals/assimp/include)
-target_link_libraries(CookEngine glm glfw Vulkan::Vulkan spdlog::spdlog assimp)
+target_include_directories(CookEngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/externals/stb ${CMAKE_CURRENT_SOURCE_DIR}/externals/glm ${CMAKE_CURRENT_SOURCE_DIR}/externals/spdlog/include ${CMAKE_CURRENT_SOURCE_DIR}/externals/glfw/include ${CMAKE_CURRENT_SOURCE_DIR}/externals/stb ${CMAKE_CURRENT_SOURCE_DIR}/externals/assimp/include ${CMAKE_CURRENT_SOURCE_DIR}/externals/vma/include)
+target_link_libraries(CookEngine glm glfw Vulkan::Vulkan spdlog::spdlog assimp GPUOpen::VulkanMemoryAllocator)
