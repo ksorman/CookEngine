@@ -183,7 +183,10 @@ void Renderer::UpdateUniformBuffer(uint32_t currentFrame)
 
 void Renderer::CreateInstance()
 {
-
+    if (volkInitialize() != VK_SUCCESS) {
+       spdlog::error("Failed to initialize Volk!");
+    }
+    
     VkApplicationInfo appInfo{ .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = nullptr,
         .pApplicationName = "Demo",
@@ -210,6 +213,7 @@ void Renderer::CreateInstance()
 
     auto vkResult = vkCreateInstance(&insatnceCreateInfo, nullptr, &m_vkInstance);
     if (vkResult == VK_SUCCESS) {
+        volkLoadInstance(m_vkInstance);
         spdlog::info("Instance was created successfully");
     } else {
         spdlog::error("Instance wasn't created");
@@ -1381,6 +1385,7 @@ void Renderer::CreateLogicalDevice()
 
     auto vkResult = vkCreateDevice(m_physicalDevice, &deviceInfo, nullptr, &m_device);
     if (vkResult == VK_SUCCESS) {
+        volkLoadDevice(m_device);
         spdlog::info("vkDevice was created successfully");
     }
 

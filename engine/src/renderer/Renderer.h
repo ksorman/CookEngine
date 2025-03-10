@@ -7,14 +7,12 @@
 #include <string>
 #include <vector>
 
-#define VK_USE_PLATFORM_WIN32_KHR
+#include "VmaUsage.h"
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <glm/glm.hpp>
 #include <GLFW/glfw3native.h>
-#include "VmaUsage.h"
-
 
 namespace CookEngine {
 

@@ -16,3 +16,6 @@
 [submodule "engine/externals/vma"]
 	path = engine/externals/vma
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "engine/externals/volk"]
+	path = engine/externals/volk
+	url = https://github.com/zeux/volk.git

@@ -6,8 +6,6 @@
     #define VK_USE_PLATFORM_WIN32_KHR
 #endif // #if !defined(VK_USE_PLATFORM_WIN32_KHR)
 
-#include <vulkan/vulkan.h>
-
 #ifdef _MSVC_LANG
 
 // Uncomment to test including `vulkan.h` on your own before including VMA.
@@ -60,9 +58,8 @@ include all public interface declarations. Example:
     #pragma clang diagnostic ignored "-Wnullability-completeness"
 #endif
 
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_core.h>
-
+#define VK_NO_PROTOTYPES 
+#include "volk.h"
 #include "vk_mem_alloc.h"
 
 #ifdef __clang__
