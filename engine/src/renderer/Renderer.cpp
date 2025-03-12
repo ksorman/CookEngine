@@ -31,11 +31,12 @@ void Renderer::Init(GLFWwindow* window)
 {
     m_window = window;
 
-    spdlog::info("Reneder Init");
+    spdlog::info("[Vulkan] Reneder Init");
     CreateInstance();
     CreateSurface(m_window);
     CreatePhysicalDevice();
     CreateLogicalDevice();
+    m_shaderLoader.Init(m_device);
     CreateVMAAllocator();
     auto format = CreateSwapchain(m_window);
     CreateImageView(format);
@@ -69,12 +70,12 @@ void Renderer::DrawFrame()
       m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || framebufferResized) {
-        spdlog::info("Framebuffer was resized: {}", framebufferResized);
+        spdlog::info("[Vulkan] Framebuffer was resized: {}", framebufferResized);
         framebufferResized = false;
         RecreateSwapchain();
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-        spdlog::error("Failed to acquire swap chain image!");
+        spdlog::error("[Vulkan] Failed to acquire swap chain image!");
         return;
     }
 
@@ -102,7 +103,7 @@ void Renderer::DrawFrame()
 
 
     if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]) != VK_SUCCESS) {
-        spdlog::error("Failed to submit draw command buffer!");
+        spdlog::error("[Vulkan] Failed to submit draw command buffer!");
     }
 
 
@@ -120,11 +121,11 @@ void Renderer::DrawFrame()
     result = vkQueuePresentKHR(m_presentQueue, &presentInfo);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-        spdlog::info("Framebuffer was resized: {}", framebufferResized);
+        spdlog::info("[Vulkan] Framebuffer was resized: {}", framebufferResized);
         framebufferResized = false;
         RecreateSwapchain();
     } else if (result != VK_SUCCESS) {
-        spdlog::error("Failed to present swap chain image!");
+        spdlog::error("[Vulkan] Failed to present swap chain image!");
     }
     m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
@@ -133,7 +134,7 @@ void Renderer::Deinit()
 {
     vkDeviceWaitIdle(m_device);
 
-    spdlog::info("Reneder Deinit");
+    spdlog::info("[Vulkan] Reneder Deinit");
     DestroySyncObjects();
     DestroyDescriptorSetLayout();
     DestroyDescriptorPool();
@@ -184,9 +185,9 @@ void Renderer::UpdateUniformBuffer(uint32_t currentFrame)
 void Renderer::CreateInstance()
 {
     if (volkInitialize() != VK_SUCCESS) {
-       spdlog::error("Failed to initialize Volk!");
+        spdlog::error("[Vulkan] Failed to initialize Volk!");
     }
-    
+
     VkApplicationInfo appInfo{ .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = nullptr,
         .pApplicationName = "Demo",
@@ -214,9 +215,9 @@ void Renderer::CreateInstance()
     auto vkResult = vkCreateInstance(&insatnceCreateInfo, nullptr, &m_vkInstance);
     if (vkResult == VK_SUCCESS) {
         volkLoadInstance(m_vkInstance);
-        spdlog::info("Instance was created successfully");
+        spdlog::info("[Vulkan] Instance was created successfully");
     } else {
-        spdlog::error("Instance wasn't created");
+        spdlog::error("[Vulkan] Instance wasn't created");
     }
 }
 
@@ -225,7 +226,7 @@ void Renderer::CreatePhysicalDevice()
     uint32_t numDevices = 0;
     auto vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &numDevices, nullptr);
     if (vkResult != VK_SUCCESS) {
-        spdlog::error("Devices not found");
+        spdlog::error("[Vulkan] Devices not found");
     }
 
     if (numDevices > 0) {
@@ -235,7 +236,7 @@ void Renderer::CreatePhysicalDevice()
             for (const auto& device : devices) {
                 VkPhysicalDeviceProperties property;
                 vkGetPhysicalDeviceProperties(device, &property);
-                spdlog::info("Device: {}", property.deviceName);
+                spdlog::info("[Vulkan] Device: {}", property.deviceName);
             }
         }
 
@@ -308,7 +309,7 @@ VkSurfaceFormatKHR Renderer::ChooseSwapSurfaceFormat(const std::vector<VkSurface
             return availableFormat;
         }
     }
-    spdlog::warn("Needed format didnt found!");
+    spdlog::warn("[Vulkan] Needed format didnt found!");
     return availableFormats[0];
 }
 
@@ -343,7 +344,7 @@ uint32_t Renderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags pro
         }
     }
 
-    spdlog::error("Failed to find suitable memory type!");
+    spdlog::error("[Vulkan] Failed to find suitable memory type!");
     return 0;
 }
 
@@ -355,7 +356,7 @@ void Renderer::CreateSurface(GLFWwindow* window)
     createInfo.hinstance = GetModuleHandle(nullptr);
     auto vkResult = vkCreateWin32SurfaceKHR(m_vkInstance, &createInfo, nullptr, &m_surface);
     if (vkResult != VK_SUCCESS) {
-        spdlog::error("Creating surface failed");
+        spdlog::error("[Vulkan] Creating surface failed");
     }
 }
 
@@ -389,7 +390,7 @@ VkFormat Renderer::CreateSwapchain(GLFWwindow* window)
     auto result = vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swapChain);
 
     if (result != VK_SUCCESS) {
-        spdlog::error("Failed to create swap chain!");
+        spdlog::error("[Vulkan] Failed to create swap chain!");
         return surfaceFormat.format;
     }
 
@@ -397,7 +398,7 @@ VkFormat Renderer::CreateSwapchain(GLFWwindow* window)
     m_swapChainImages.resize(imageCount);
     vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, m_swapChainImages.data());
 
-    spdlog::info("Swapchain created successfully");
+    spdlog::info("[Vulkan] Swapchain created successfully");
 
     return surfaceFormat.format;
 }
@@ -440,7 +441,7 @@ void Renderer::CreateImageView(const VkFormat& format)
     for (size_t i = 0; i < m_swapChainImages.size(); i++) {
         m_swapChainImageViews[i] = CreateImageView(m_swapChainImages[i], format, VK_IMAGE_ASPECT_COLOR_BIT);
     }
-    spdlog::info("ImageView for swapchain successfully created");
+    spdlog::info("[Vulkan] ImageView for swapchain successfully created");
 }
 
 VkFormat Renderer::FindSupportedFormat(const std::vector<VkFormat>& candidates,
@@ -458,7 +459,7 @@ VkFormat Renderer::FindSupportedFormat(const std::vector<VkFormat>& candidates,
         }
     }
 
-    spdlog::error("Failed to find supported format!");
+    spdlog::error("[Vulkan] Failed to find supported format!");
     return VK_FORMAT_UNDEFINED;
 }
 
@@ -479,7 +480,8 @@ void Renderer::CreateVertexBuffer()
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       stagingBuffer,
-      stagingBufferMemory);
+      stagingBufferMemory,
+      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
     void* data;
     vmaMapMemory(m_vmaAllocator, stagingBufferMemory, &data);
@@ -490,12 +492,12 @@ void Renderer::CreateVertexBuffer()
       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       m_vertexBuffer,
-      m_vertexBufferMemory);
+      m_vertexBufferMemory,
+      0);
 
     CopyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
 
     vmaDestroyBuffer(m_vmaAllocator, stagingBuffer, stagingBufferMemory);
-    vmaFreeMemory(m_vmaAllocator, stagingBufferMemory);
 }
 
 void Renderer::CreateIndexBuffer()
@@ -508,7 +510,8 @@ void Renderer::CreateIndexBuffer()
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       stagingBuffer,
-      stagingBufferMemory);
+      stagingBufferMemory,
+      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
     void* data;
     vmaMapMemory(m_vmaAllocator, stagingBufferMemory, &data);
@@ -519,12 +522,12 @@ void Renderer::CreateIndexBuffer()
       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       m_indexBuffer,
-      m_indexBufferMemory);
+      m_indexBufferMemory,
+      0);
 
     CopyBuffer(stagingBuffer, m_indexBuffer, bufferSize);
 
     vmaDestroyBuffer(m_vmaAllocator, stagingBuffer, stagingBufferMemory);
-    vmaFreeMemory(m_vmaAllocator, stagingBufferMemory);
 }
 
 void Renderer::CreateUniformBuffers()
@@ -540,7 +543,8 @@ void Renderer::CreateUniformBuffers()
           VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
           m_uniformBuffers[i],
-          m_uniformBuffersMemory[i]);
+          m_uniformBuffersMemory[i],
+          VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
         vmaMapMemory(m_vmaAllocator, m_uniformBuffersMemory[i], &m_uniformBuffersMapped[i]);
     }
 }
@@ -549,9 +553,13 @@ bool Renderer::CreateBuffer(VkDeviceSize size,
   VkBufferUsageFlags usage,
   VkMemoryPropertyFlags properties,
   VkBuffer& buffer,
-  VmaAllocation& bufferAllocation)
+  VmaAllocation& bufferAllocation,
+  VmaAllocationCreateFlags vmaFlags)
 {
-    VmaAllocationCreateInfo allocInfo{ .usage = VMA_MEMORY_USAGE_AUTO };
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.flags = vmaFlags;
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    allocInfo.requiredFlags = properties;
 
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -559,9 +567,8 @@ bool Renderer::CreateBuffer(VkDeviceSize size,
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-
-    if (VK_SUCCESS != vmaCreateBuffer(m_vmaAllocator, &bufferInfo, &allocInfo, &buffer, &bufferAllocation, nullptr)) {
-        spdlog::error("[Vulkan] Faild to create buffer!");
+    if (vmaCreateBuffer(m_vmaAllocator, &bufferInfo, &allocInfo, &buffer, &bufferAllocation, nullptr) != VK_SUCCESS) {
+        spdlog::error("[Vulkan] Failed to create buffer!");
         return false;
     }
     return true;
@@ -595,7 +602,7 @@ void Renderer::CreateFramebuffers()
         framebufferInfo.layers = 1;
 
         if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]) == VK_SUCCESS) {
-            spdlog::info("Framebuffer crated successfully");
+            spdlog::info("[Vulkan] Framebuffer crated successfully");
         }
     }
 }
@@ -624,33 +631,16 @@ void Renderer::CreateDescriptorSetLayout()
     layoutInfo.pBindings = bindings.data();
 
     if (vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayout) != VK_SUCCESS) {
-        spdlog::error("Failed to create descriptor set layout!");
+        spdlog::error("[Vulkan] Failed to create descriptor set layout!");
     }
 }
 
 void Renderer::CreateGraphicsPipeline()
 {
-    auto vertShaderCode = ReadFile(PATH_TO_SHADER_FOLDER + "/triangleVS.spv");
-    auto pixelShaderCode = ReadFile(PATH_TO_SHADER_FOLDER + "/trianglePS.spv");
+    Shader vertShader = m_shaderLoader.LoadShader(PATH_TO_SHADER_FOLDER + L"/triangle.vert");
+    Shader fragShader = m_shaderLoader.LoadShader(PATH_TO_SHADER_FOLDER + L"/triangle.frag");
 
-    VkShaderModule vertShaderModule = CreateShaderModule(vertShaderCode);
-    VkShaderModule pixelShaderModule = CreateShaderModule(pixelShaderCode);
-
-    VkPipelineShaderStageCreateInfo vertShaderStageInfo{ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext = nullptr,
-        .stage = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = vertShaderModule,
-        .pName = "main",
-        .pSpecializationInfo = nullptr };
-
-    VkPipelineShaderStageCreateInfo pixelShaderStageInfo{ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .pNext = nullptr,
-        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = pixelShaderModule,
-        .pName = "main",
-        .pSpecializationInfo = nullptr };
-
-    VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, pixelShaderStageInfo };
+    VkPipelineShaderStageCreateInfo shaderStages[] = { vertShader, fragShader };
 
     std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
@@ -743,7 +733,7 @@ void Renderer::CreateGraphicsPipeline()
     pipelineLayoutInfo.pPushConstantRanges = nullptr;// Optional
 
     if (vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
-        spdlog::error("Failed to create pipeline layout!");
+        spdlog::error("[Vulkan] Failed to create pipeline layout!");
     }
 
     VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo{};
@@ -776,13 +766,10 @@ void Renderer::CreateGraphicsPipeline()
 
     if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline)
         != VK_SUCCESS) {
-        spdlog::error("Failed to create graphics pipeline!");
+        spdlog::error("[Vulkan] Failed to create graphics pipeline!");
     } else {
-        spdlog::info("Graphics pipeline created successfully!");
+        spdlog::info("[Vulkan] Graphics pipeline created successfully!");
     }
-
-    vkDestroyShaderModule(m_device, pixelShaderModule, nullptr);
-    vkDestroyShaderModule(m_device, vertShaderModule, nullptr);
 }
 
 VkShaderModule Renderer::CreateShaderModule(const std::vector<char>& code)
@@ -794,7 +781,7 @@ VkShaderModule Renderer::CreateShaderModule(const std::vector<char>& code)
 
     VkShaderModule shaderModule;
     if (vkCreateShaderModule(m_device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-        spdlog::error("Failed to create shader module!");
+        spdlog::error("[Vulkan] Failed to create shader module!");
     }
 
     return shaderModule;
@@ -858,9 +845,9 @@ void Renderer::CreateRenderPass(const VkFormat& format)
     renderPassInfo.pDependencies = &dependency;
 
     if (vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS) {
-        spdlog::error("Failed to create render pass!");
+        spdlog::error("[Vulkan] Failed to create render pass!");
     } else {
-        spdlog::info("Render pass created successfully!");
+        spdlog::info("[Vulkan] Render pass created successfully!");
     }
 }
 
@@ -874,7 +861,7 @@ void Renderer::CreateCommandPool()
     poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
     if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool) == VK_SUCCESS) {
-        spdlog::info("Command pool created successfully");
+        spdlog::info("[Vulkan] Command pool created successfully");
     }
 }
 
@@ -889,7 +876,7 @@ void Renderer::CreateCommandBuffers()
     allocInfo.commandBufferCount = static_cast<uint32_t>(m_commandBuffers.size());
 
     if (vkAllocateCommandBuffers(m_device, &allocInfo, m_commandBuffers.data()) == VK_SUCCESS) {
-        spdlog::info("Command buffers created successfully");
+        spdlog::info("[Vulkan] Command buffers created successfully");
     }
 }
 
@@ -901,7 +888,7 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     beginInfo.pInheritanceInfo = nullptr;// Optional
 
     if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-        spdlog::error("Failed to begin recording command buffer!");
+        spdlog::error("[Vulkan] Failed to begin recording command buffer!");
     }
 
     VkRenderPassBeginInfo renderPassInfo{};
@@ -956,7 +943,7 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     vkCmdEndRenderPass(commandBuffer);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        spdlog::error("Failed to record command buffer!");
+        spdlog::error("[Vulkan] Failed to record command buffer!");
     }
 }
 
@@ -1010,7 +997,7 @@ void Renderer::CreateDescriptorPool()
     poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
     if (vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS) {
-        spdlog::error("Failed to create descriptor pool!");
+        spdlog::error("[Vulkan] Failed to create descriptor pool!");
     }
 }
 
@@ -1025,7 +1012,7 @@ void Renderer::CreateDescriptorSets()
 
     m_descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
     if (vkAllocateDescriptorSets(m_device, &allocInfo, m_descriptorSets.data()) != VK_SUCCESS) {
-        spdlog::error("Failed to allocate descriptor sets!");
+        spdlog::error("[Vulkan] Failed to allocate descriptor sets!");
     }
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -1079,7 +1066,7 @@ void Renderer::CreateSyncObjects()
         if (vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i]) != VK_SUCCESS
             || vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]) != VK_SUCCESS
             || vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]) != VK_SUCCESS) {
-            spdlog::error("Failed to create semaphores!");
+            spdlog::error("[Vulkan] Failed to create semaphores!");
         }
     }
 }
@@ -1093,7 +1080,8 @@ void Renderer::CreateDepthBuffer()
       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       m_depthBuffer,
-      m_depthBufferMemory);
+      m_depthBufferMemory,
+      0);
 
     TransitionImageLayout(
       m_depthBuffer, FindDepthFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
@@ -1110,7 +1098,7 @@ void Renderer::CreateTextureImage()
     VkDeviceSize imageSize = static_cast<VkDeviceSize>(texWidth) * texHeight * 4;
 
     if (!pixels) {
-        spdlog::error("Failed to load texture image!");
+        spdlog::error("[Vulkan] Failed to load texture image!");
     }
 
     VkBuffer stagingBuffer;
@@ -1119,7 +1107,8 @@ void Renderer::CreateTextureImage()
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       stagingBuffer,
-      stagingBufferMemory);
+      stagingBufferMemory,
+      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
     void* data;
 
@@ -1136,7 +1125,8 @@ void Renderer::CreateTextureImage()
       VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
       VK_SHARING_MODE_EXCLUSIVE,
       m_textureImage,
-      m_textureImageMemory);
+      m_textureImageMemory,
+      0);
 
     TransitionImageLayout(
       m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -1149,7 +1139,6 @@ void Renderer::CreateTextureImage()
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     vmaDestroyBuffer(m_vmaAllocator, stagingBuffer, stagingBufferMemory);
-    vmaFreeMemory(m_vmaAllocator, stagingBufferMemory);
 }
 
 bool Renderer::HasStencilComponent(VkFormat format)
@@ -1206,7 +1195,7 @@ void Renderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayo
         sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     } else {
-        spdlog::error("Unsupported layout transition!");
+        spdlog::error("[Vulkan] Unsupported layout transition!");
     }
 
     vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
@@ -1257,7 +1246,7 @@ VkImageView Renderer::CreateImageView(VkImage image, VkFormat format, VkImageAsp
 
     VkImageView imageView;
     if (vkCreateImageView(m_device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-        spdlog::error("Failed to create texture image view!");
+        spdlog::error("[Vulkan] Failed to create texture image view!");
     }
 
     return imageView;
@@ -1287,7 +1276,7 @@ void Renderer::CreateTextureSampler()
     samplerInfo.maxLod = 0.0f;
 
     if (vkCreateSampler(m_device, &samplerInfo, nullptr, &m_textureSampler) != VK_SUCCESS) {
-        spdlog::error("Failed to create texture sampler!");
+        spdlog::error("[Vulkan] Failed to create texture sampler!");
     }
 }
 
@@ -1298,9 +1287,13 @@ bool Renderer::CreateImage(uint32_t width,
   VkImageUsageFlags usage,
   VkMemoryPropertyFlags properties,
   VkImage& image,
-  VmaAllocation& imageMemory)
+  VmaAllocation& imageMemory,
+  VmaAllocationCreateFlags vmaFlags)
 {
-    VmaAllocationCreateInfo allocInfo{ .usage = VMA_MEMORY_USAGE_AUTO };
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.flags = vmaFlags;
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    allocInfo.requiredFlags = properties;
 
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1329,7 +1322,7 @@ std::vector<char> Renderer::ReadFile(const std::string& filename)
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
     if (!file.is_open()) {
-        spdlog::error("Failed to open file: {}", filename);
+        spdlog::error("[Vulkan] Failed to open file: {}", filename);
         return {};
     }
 
@@ -1351,7 +1344,7 @@ void Renderer::CreateLogicalDevice()
     supportedFeatures.samplerAnisotropy = VK_TRUE;
     auto queueFamilyIndices = ChooseQueue();
     if (!queueFamilyIndices.isComplete()) {
-        spdlog::error("Choosing Queue is faild!");
+        spdlog::error("[Vulkan] Choosing Queue is faild!");
         return;
     }
 
@@ -1386,7 +1379,7 @@ void Renderer::CreateLogicalDevice()
     auto vkResult = vkCreateDevice(m_physicalDevice, &deviceInfo, nullptr, &m_device);
     if (vkResult == VK_SUCCESS) {
         volkLoadDevice(m_device);
-        spdlog::info("vkDevice was created successfully");
+        spdlog::info("[Vulkan] vkDevice was created successfully");
     }
 
     vkGetDeviceQueue(m_device, queueFamilyIndices.graphicsFamily.value(), 0, &m_graphicsQueue);
@@ -1395,22 +1388,26 @@ void Renderer::CreateLogicalDevice()
 
 bool Renderer::CreateVMAAllocator()
 {
+    VmaVulkanFunctions vmaFunctions = {};
+    vmaFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+    vmaFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+
     VmaAllocatorCreateInfo allocatorInfo{ .physicalDevice = m_physicalDevice,
         .device = m_device,
         .preferredLargeHeapBlockSize = 0,
         .pAllocationCallbacks = nullptr,
         .pDeviceMemoryCallbacks = nullptr,
         .pHeapSizeLimit = nullptr,
-        .pVulkanFunctions = nullptr,
+        .pVulkanFunctions = &vmaFunctions,
         .instance = m_vkInstance,
         .vulkanApiVersion = VK_API_VERSION_1_0,
         .pTypeExternalMemoryHandleTypes = nullptr };
 
     if (VK_SUCCESS == vmaCreateAllocator(&allocatorInfo, &m_vmaAllocator)) {
-        spdlog::info("VmaAllocator was created successfully");
+        spdlog::info("[Vulkan] VmaAllocator was created successfully");
         return true;
     }
-    spdlog::error("VmaAllocator creating is faild!");
+    spdlog::error("[Vulkan] VmaAllocator creating is faild!");
     return false;
 }
 
@@ -1484,26 +1481,23 @@ void Renderer::DestroySyncObjects()
 void Renderer::DestroyTextureImage()
 {
     vmaDestroyImage(m_vmaAllocator, m_textureImage, m_textureImageMemory);
-    vmaFreeMemory(m_vmaAllocator, m_textureImageMemory);
 }
 
 void Renderer::DestroyVertexBuffer()
 {
     vmaDestroyBuffer(m_vmaAllocator, m_vertexBuffer, m_vertexBufferMemory);
-    vmaFreeMemory(m_vmaAllocator, m_vertexBufferMemory);
 }
 
 void Renderer::DestroyIndexBuffer()
 {
     vmaDestroyBuffer(m_vmaAllocator, m_indexBuffer, m_indexBufferMemory);
-    vmaFreeMemory(m_vmaAllocator, m_indexBufferMemory);
 }
 
 void Renderer::DestroyUniformBuffer()
 {
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vmaUnmapMemory(m_vmaAllocator, m_uniformBuffersMemory[i]);
         vmaDestroyBuffer(m_vmaAllocator, m_uniformBuffers[i], m_uniformBuffersMemory[i]);
-        vmaFreeMemory(m_vmaAllocator, m_uniformBuffersMemory[i]);
     }
 }
 
@@ -1535,7 +1529,6 @@ void Renderer::DestroyTextureSampler()
 void Renderer::DestroyDepthBuffer()
 {
     vmaDestroyImage(m_vmaAllocator, m_depthBuffer, m_depthBufferMemory);
-    vmaFreeMemory(m_vmaAllocator, m_depthBufferMemory);
 }
 
 void Renderer::DestroyVMAAllocator()

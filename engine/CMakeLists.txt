@@ -40,4 +40,5 @@ target_link_libraries(CookEngine
    Vulkan::Vulkan
    spdlog::spdlog
    assimp
-   GPUOpen::VulkanMemoryAllocator)
+   GPUOpen::VulkanMemoryAllocator
+   dxcompiler)

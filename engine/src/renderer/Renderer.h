@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "ShaderLoader.h"
 #include "VmaUsage.h"
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
@@ -110,7 +111,8 @@ class Renderer
       VkBufferUsageFlags usage,
       VkMemoryPropertyFlags properties,
       VkBuffer& buffer,
-      VmaAllocation& bufferAllocation);
+      VmaAllocation& bufferAllocation,
+      VmaAllocationCreateFlags vmaFlags);
     void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
     void CreateFramebuffers();
@@ -139,7 +141,8 @@ class Renderer
       VkImageUsageFlags usage,
       VkMemoryPropertyFlags properties,
       VkImage& image,
-      VmaAllocation& imageMemory);
+      VmaAllocation& imageMemory,
+      VmaAllocationCreateFlags vmaFlags);
     bool HasStencilComponent(VkFormat format);
     void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
     void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
@@ -240,11 +243,12 @@ class Renderer
     VkImageView m_depthBufferView;
 
     VmaAllocator m_vmaAllocator;
+    ShaderLoader m_shaderLoader;
 
     const int MAX_FRAMES_IN_FLIGHT = 2;
 
-    const std::string PATH_TO_SHADER_FOLDER = "./../../engine/shaders";
-    const std::string PATH_TO_ASSETS_FOLDER = "./../../engine/assets";
+    const std::wstring PATH_TO_SHADER_FOLDER = L"./../engine/shaders";
+    const std::string PATH_TO_ASSETS_FOLDER = "./../engine/assets";
 };
 }// namespace CookEngine
 #endif// RENDERER_H
