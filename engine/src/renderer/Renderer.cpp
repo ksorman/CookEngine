@@ -1,5 +1,8 @@
 #include "Renderer.h"
+#include "Camera.h"
+#include "Scene.h"
 #include "VmaUsage.h"
+#include "glm/ext/matrix_transform.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -9,7 +12,7 @@
 #include <spdlog/spdlog.h>
 #include <vulkan/vulkan_core.h>
 
-
+#define GLM_FORCE_LEFT_HANDED
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -61,7 +64,7 @@ void Renderer::Init(GLFWwindow* window)
     m_currentFrame = 0;
 }
 
-void Renderer::DrawFrame()
+void Renderer::DrawFrame(const Scene& scene)
 {
     vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
 
@@ -83,7 +86,7 @@ void Renderer::DrawFrame()
 
     vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0);
 
-    UpdateUniformBuffer(m_currentFrame);
+    UpdateUniformBuffer(scene.GetCamera(), m_currentFrame);
     RecordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
 
     VkSubmitInfo submitInfo{};
@@ -165,7 +168,7 @@ bool& Renderer::RefToBoolForResize()
     return framebufferResized;
 }
 
-void Renderer::UpdateUniformBuffer(uint32_t currentFrame)
+void Renderer::UpdateUniformBuffer(const Camera& camera, uint32_t currentFrame)
 {
     static auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -174,10 +177,9 @@ void Renderer::UpdateUniformBuffer(uint32_t currentFrame)
 
     UniformBufferObject ubo{};
     ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(
-      glm::radians(45.0f), m_swapChainExtent.width / static_cast<float>(m_swapChainExtent.height), 0.1f, 10.0f);
-    ubo.proj[1][1] *= -1;
+    ubo.model = glm::translate(ubo.model, glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = camera.GetView();
+    ubo.proj = camera.GetProj();
 
     memcpy(m_uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 }

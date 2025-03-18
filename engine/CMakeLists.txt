@@ -17,6 +17,7 @@ add_subdirectory(externals/glfw)
 add_subdirectory(externals/assimp)
 add_subdirectory(externals/vma)
 add_subdirectory(externals/volk)
+add_subdirectory(externals/EnTT)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/shaders DESTINATION ${CMAKE_BINARY_DIR}/engine)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR}/engine)
@@ -30,7 +31,8 @@ target_include_directories(CookEngine PUBLIC
    ${CMAKE_CURRENT_SOURCE_DIR}/externals/glfw/include 
    ${CMAKE_CURRENT_SOURCE_DIR}/externals/stb 
    ${CMAKE_CURRENT_SOURCE_DIR}/externals/assimp/include 
-   ${CMAKE_CURRENT_SOURCE_DIR}/externals/vma/include)
+   ${CMAKE_CURRENT_SOURCE_DIR}/externals/vma/include 
+   ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
    
 target_link_libraries(CookEngine 
@@ -41,4 +43,5 @@ target_link_libraries(CookEngine
    spdlog::spdlog
    assimp
    GPUOpen::VulkanMemoryAllocator
-   dxcompiler)
+   dxcompiler
+   EnTT::EnTT)

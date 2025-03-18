@@ -4,6 +4,9 @@ set(PROJECT_NAME Demo)
 set(COOK_ENGINE_SRC_PATH ${CMAKE_CURRENT_LIST_DIR}/../engine/src)
 include_directories(${COOK_ENGINE_SRC_PATH})
 
-add_executable(${PROJECT_NAME} main.cpp)
+file(GLOB_RECURSE SRC_FILES LIST_DIRECTORIES false RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ./*.c??)
+file(GLOB_RECURSE HEADER_FILES LIST_DIRECTORIES false RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ./*.h)
+
+add_executable(${PROJECT_NAME} ${HEADER_FILES} ${SRC_FILES})
 
 target_link_libraries(Demo CookEngine)

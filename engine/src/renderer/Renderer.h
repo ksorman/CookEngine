@@ -10,12 +10,15 @@
 #include "ShaderLoader.h"
 #include "VmaUsage.h"
 #define GLFW_INCLUDE_VULKAN
-#include "GLFW/glfw3.h"
 #define GLFW_EXPOSE_NATIVE_WIN32
-#include <glm/glm.hpp>
+#include "GLFW/glfw3.h"
 #include <GLFW/glfw3native.h>
+#include "utils/UsingMath.h"
 
 namespace CookEngine {
+
+class Camera;
+class Scene;
 
 struct Vertex
 {
@@ -82,13 +85,13 @@ class Renderer
 {
   public:
     void Init(GLFWwindow* window);
-    void DrawFrame();
+    void DrawFrame(const Scene& scene);
     void Deinit();
 
     bool& RefToBoolForResize();
 
   private:
-    void UpdateUniformBuffer(uint32_t currentFrame);
+    void UpdateUniformBuffer(const Camera& camera, uint32_t currentFrame);
 
     void CreateInstance();
     void CreatePhysicalDevice();

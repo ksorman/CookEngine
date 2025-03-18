@@ -1,10 +1,32 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
+#include "InputHandler.h"
 #include <GLFW/glfw3.h>
 
+
 namespace CookEngine {
-class Window
+
+class Camera;
+
+struct UserResizeHandler
+{
+  bool* isResized;
+  Camera* camera;
+};
+
+struct UserInputHandler
+{
+  InputHandler* inputHandler;
+};
+
+struct UserHandler
+{
+  UserResizeHandler resizeHandler;
+  UserInputHandler inputHandler;
+};
+
+  class Window
 {
   public:
     Window();
@@ -15,8 +37,9 @@ class Window
     void Loop();
     GLFWwindow *GetHWND();
 
-    void SetUserDataPtr(bool& data);
-    static void ResizeHandel(GLFWwindow *window, int width, int height);
+    void SetUserDataPtr(UserHandler userHandler);
+    static void ResizeCallback(GLFWwindow *window, int width, int height);
+    static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
   public:
     static const uint32_t WIDTH = 800;
@@ -24,6 +47,7 @@ class Window
 
   private:
     GLFWwindow *m_window;
+    UserHandler m_userHandler;
 };
 }// namespace CookEngine
 

@@ -1,10 +1,10 @@
-#include <CookEngine.h>
+#include "Demo.h"
 
 int main()
 {
-    CookEngine::EngineApi engineApi;
-    engineApi.Init();
-    engineApi.Loop();
-    engineApi.Deinit();
+    Demo demo;
+    demo.Init();
+    demo.Loop();
+    demo.Deinit();
     return 0;
 }

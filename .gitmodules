@@ -19,3 +19,6 @@
 [submodule "engine/externals/volk"]
 	path = engine/externals/volk
 	url = https://github.com/zeux/volk.git
+[submodule "engine/externals/EnTT"]
+	path = engine/externals/EnTT
+	url = https://github.com/skypjack/entt.git
