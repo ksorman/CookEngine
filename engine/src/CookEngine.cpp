@@ -12,9 +12,13 @@ void EngineApi::Init()
     m_renderer = std::make_unique<Renderer>();
     m_scene = std::make_unique<Scene>();
     m_renderer->Init(m_window->GetHWND());
+    m_scene->GetCamera().SetAspectRatio(static_cast<float>(Window::WIDTH) / Window::HEIGHT);
     m_window->SetUserDataPtr({ { &(m_renderer->RefToBoolForResize()), &(m_scene->GetCamera()) }, &m_inputHandler });
     m_inputHandler.SetKeyCallback(
       [this](InputHandler::Key key, InputHandler::KeyState action) { InputCallback(key, action); });
+    m_inputHandler.SetMouseButtonCallback(
+      [this](InputHandler::MouseButton key, InputHandler::KeyState action) { MouseInputCallback(key, action); });
+    m_inputHandler.SetMousePositionCallback([this](double xPos, double yPos) { MousePositionCallback(xPos, yPos); });
 }
 
 void EngineApi::Deinit()
@@ -37,6 +41,10 @@ bool EngineApi::Loop()
 void EngineApi::Tick() {}
 
 void EngineApi::InputCallback(InputHandler::Key key, InputHandler::KeyState action) {}
+
+void EngineApi::MouseInputCallback(InputHandler::MouseButton key, InputHandler::KeyState action) {}
+
+void EngineApi::MousePositionCallback(double xPos, double yPos) {}
 
 Scene& EngineApi::GetScene()
 {

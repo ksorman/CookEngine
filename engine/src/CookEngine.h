@@ -18,6 +18,8 @@ class EngineApi
     bool Loop();
     virtual void Tick();
     virtual void InputCallback(InputHandler::Key key, InputHandler::KeyState action);
+    virtual void MouseInputCallback(InputHandler::MouseButton key, InputHandler::KeyState action);
+    virtual void MousePositionCallback(double xPos, double yPos);
 
     Scene& GetScene();
     const Utils::EngineTimer& GetTimer() const;
