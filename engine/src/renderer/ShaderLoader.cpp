@@ -49,14 +49,14 @@ Shader ShaderLoader::LoadShader(const std::wstring& fileName)
 
     ShaderType type;
     LPCWSTR targetProfile{};
-    size_t idx = fileName.rfind('.');
+    size_t idx = fileName.rfind('.', fileName.size() - 6);
     if (idx != std::string::npos) {
         std::wstring extension = fileName.substr(idx + 1);
-        if (extension == L"vert") {
+        if (extension == L"vert.hlsl") {
             targetProfile = L"vs_6_1";
             type = ShaderType::VERTEX;
         }
-        if (extension == L"frag") {
+        if (extension == L"frag.hlsl") {
             targetProfile = L"ps_6_1";
             type = ShaderType::FRAGMENT;
         }

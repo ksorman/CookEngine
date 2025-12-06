@@ -1,7 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "utils/UsingMath.h"
+#include "utils/MathUsage.h"
 
 namespace CookEngine {
 class Camera

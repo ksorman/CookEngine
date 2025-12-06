@@ -2,6 +2,7 @@
 #define COOK_ENGINE_H
 
 #include "InputHandler.h"
+#include "ModelLoader.h"
 #include "renderer/Renderer.h"
 #include "renderer/Scene.h"
 #include "utils/Timer.h"
@@ -16,6 +17,7 @@ class EngineApi
     void Init();
     void Deinit();
     bool Loop();
+    virtual void LoadWorld();
     virtual void Tick();
     virtual void InputCallback(InputHandler::Key key, InputHandler::KeyState action);
     virtual void MouseInputCallback(InputHandler::MouseButton key, InputHandler::KeyState action);
@@ -24,6 +26,10 @@ class EngineApi
     Scene& GetScene();
     const Utils::EngineTimer& GetTimer() const;
     const InputHandler& GetInputHandler() const;
+
+  protected:
+    std::unique_ptr<ModelLoader> m_modelLoader;
+
   private:
     std::unique_ptr<Renderer> m_renderer;
     std::unique_ptr<Window> m_window;

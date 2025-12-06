@@ -1,6 +1,11 @@
 #include "Demo.h"
 #include "glm/fwd.hpp"
 
+void Demo::LoadWorld()
+{
+    m_modelLoader->GetModel(PATH_TO_ASSETS_FOLDER + "/spider.glb");
+}
+
 void Demo::InputCallback(CookEngine::InputHandler::Key key, CookEngine::InputHandler::KeyState action)
 {
     switch (key) {
@@ -21,42 +26,39 @@ void Demo::Tick()
     double deltaMousePosX = m_mousePosX - m_prevMousePosX;
     double deltaMousePosY = m_mousePosY - m_prevMousePosY;
 
+    glm::vec3 offset = glm::vec3(0.0f, 0.0f, 0.0f);
+
     if (GetInputHandler().IsKeyPressed(CookEngine::InputHandler::Key::KEY_W)
         || GetInputHandler().IsKeyHeld(CookEngine::InputHandler::Key::KEY_W)) {
-        glm::vec3 offset = (glm::vec3(0.0f, 0.0f, 1.0f) * deltaRealTime);
-        GetScene().GetCamera().MoveReletive(offset);
+        offset += (glm::vec3(0.0f, 0.0f, 1.0f) * deltaRealTime);
     }
     if (GetInputHandler().IsKeyPressed(CookEngine::InputHandler::Key::KEY_S)
         || GetInputHandler().IsKeyHeld(CookEngine::InputHandler::Key::KEY_S)) {
-        glm::vec3 offset = (glm::vec3(0.0f, 0.0f, -1.0f) * deltaRealTime);
-        GetScene().GetCamera().MoveReletive(offset);
+        offset += (glm::vec3(0.0f, 0.0f, -1.0f) * deltaRealTime);
     }
     if (GetInputHandler().IsKeyPressed(CookEngine::InputHandler::Key::KEY_A)
         || GetInputHandler().IsKeyHeld(CookEngine::InputHandler::Key::KEY_A)) {
-        glm::vec3 offset = (glm::vec3(-1.0f, 0.0f, 0.0f) * deltaRealTime);
-        GetScene().GetCamera().MoveReletive(offset);
+        offset += (glm::vec3(-1.0f, 0.0f, 0.0f) * deltaRealTime);
     }
     if (GetInputHandler().IsKeyPressed(CookEngine::InputHandler::Key::KEY_D)
         || GetInputHandler().IsKeyHeld(CookEngine::InputHandler::Key::KEY_D)) {
-        glm::vec3 offset = (glm::vec3(1.0f, 0.0f, 0.0f) * deltaRealTime);
-        GetScene().GetCamera().MoveReletive(offset);
+        offset += (glm::vec3(1.0f, 0.0f, 0.0f) * deltaRealTime);
     }
     if (GetInputHandler().IsKeyPressed(CookEngine::InputHandler::Key::KEY_Q)
         || GetInputHandler().IsKeyHeld(CookEngine::InputHandler::Key::KEY_Q)) {
-        glm::vec3 offset = (glm::vec3(0.0f, 1.0f, 0.0f) * deltaRealTime);
-        GetScene().GetCamera().MoveReletive(offset);
+        offset += (glm::vec3(0.0f, 1.0f, 0.0f) * deltaRealTime);
     }
     if (GetInputHandler().IsKeyPressed(CookEngine::InputHandler::Key::KEY_E)
         || GetInputHandler().IsKeyHeld(CookEngine::InputHandler::Key::KEY_E)) {
-        glm::vec3 offset = (glm::vec3(0.0f, -1.0f, 0.0f) * deltaRealTime);
-        GetScene().GetCamera().MoveReletive(offset);
+        offset += (glm::vec3(0.0f, -1.0f, 0.0f) * deltaRealTime);
     }
-
+    
+    GetScene().GetCamera().MoveReletive(offset);
 
     if (GetInputHandler().IsKeyPressed(CookEngine::InputHandler::MouseButton::KEY_LEFT)
         || GetInputHandler().IsKeyHeld(CookEngine::InputHandler::MouseButton::KEY_LEFT)) {
-        glm::vec3 offset = (glm::vec3(deltaMousePosY, deltaMousePosX, 0.0f) * static_cast<float>(m_sensivity) * deltaRealTime);
-        GetScene().GetCamera().RotateReletive(offset);
+        glm::vec3 rotation = (glm::vec3(deltaMousePosY, deltaMousePosX, 0.0f) * static_cast<float>(m_sensivity) * deltaRealTime);
+        GetScene().GetCamera().RotateReletive(rotation);
     }
 
     m_prevMousePosX = m_mousePosX;

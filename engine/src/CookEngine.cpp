@@ -1,5 +1,6 @@
 
 #include "CookEngine.h"
+#include "ModelLoader.h"
 #include "renderer/Scene.h"
 #include "window/Window.h"
 #include <memory>
@@ -11,6 +12,8 @@ void EngineApi::Init()
     m_window = std::make_unique<Window>();
     m_renderer = std::make_unique<Renderer>();
     m_scene = std::make_unique<Scene>();
+    m_modelLoader = std::make_unique<ModelLoader>();
+
     m_renderer->Init(m_window->GetHWND());
     m_scene->GetCamera().SetAspectRatio(static_cast<float>(Window::WIDTH) / Window::HEIGHT);
     m_window->SetUserDataPtr({ { &(m_renderer->RefToBoolForResize()), &(m_scene->GetCamera()) }, &m_inputHandler });
@@ -19,6 +22,7 @@ void EngineApi::Init()
     m_inputHandler.SetMouseButtonCallback(
       [this](InputHandler::MouseButton key, InputHandler::KeyState action) { MouseInputCallback(key, action); });
     m_inputHandler.SetMousePositionCallback([this](double xPos, double yPos) { MousePositionCallback(xPos, yPos); });
+    LoadWorld();
 }
 
 void EngineApi::Deinit()
@@ -37,6 +41,8 @@ bool EngineApi::Loop()
     }
     return true;
 }
+
+void EngineApi::LoadWorld() {}
 
 void EngineApi::Tick() {}
 

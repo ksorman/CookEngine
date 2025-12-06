@@ -23,7 +23,7 @@
 #include <chrono>
 
 namespace CookEngine {
-const std::vector<Vertex> vertices = { { { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
+const std::vector<OldVertex> vertices = { { { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
     { { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
     { { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
     { { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } } };
@@ -634,8 +634,8 @@ void Renderer::CreateDescriptorSetLayout()
 
 void Renderer::CreateGraphicsPipeline()
 {
-    Shader vertShader = m_shaderLoader.LoadShader(PATH_TO_SHADER_FOLDER + L"/triangle.vert");
-    Shader fragShader = m_shaderLoader.LoadShader(PATH_TO_SHADER_FOLDER + L"/triangle.frag");
+    Shader vertShader = m_shaderLoader.LoadShader(PATH_TO_SHADER_FOLDER + L"/triangle.vert.hlsl");
+    Shader fragShader = m_shaderLoader.LoadShader(PATH_TO_SHADER_FOLDER + L"/triangle.frag.hlsl");
 
     VkPipelineShaderStageCreateInfo shaderStages[] = { vertShader, fragShader };
 
@@ -646,8 +646,8 @@ void Renderer::CreateGraphicsPipeline()
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
-    auto bindingDescription = Vertex::getBindingDescription();
-    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+    auto bindingDescription = OldVertex::getBindingDescription();
+    auto attributeDescriptions = OldVertex::getAttributeDescriptions();
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

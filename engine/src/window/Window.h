@@ -26,7 +26,7 @@ struct UserHandler
   UserInputHandler inputHandler;
 };
 
-  class Window
+class Window
 {
   public:
     Window();
@@ -44,8 +44,8 @@ struct UserHandler
     static void MousePositionCallback(GLFWwindow* window, double xpos, double ypos);
 
   public:
-    static const uint32_t WIDTH = 1400;
-    static const uint32_t HEIGHT = 900;
+    static const uint32_t WIDTH = 1920;
+    static const uint32_t HEIGHT = 1080;
 
   private:
     GLFWwindow *m_window;
