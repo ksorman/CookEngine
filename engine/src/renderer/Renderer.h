@@ -9,6 +9,7 @@
 
 #include "ShaderLoader.h"
 #include "VmaUsage.h"
+#include "utils/GeometryPrimitives.h"
 #define GLFW_INCLUDE_VULKAN
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include "GLFW/glfw3.h"
@@ -68,8 +69,8 @@ class Renderer
       FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
     VkFormat FindDepthFormat();
 
-    void CreateVertexBuffer();
-    void CreateIndexBuffer();
+    void CreateVertexBuffer(const std::vector<Vertex>& vertices, VkBuffer& vertexBuffer, VmaAllocation& vertexBufferMemory);
+    void CreateIndexBuffer(const std::vector<uint32_t>& indices, VkBuffer& indexBuffer, VmaAllocation& indexBufferMemory);
     void CreateUniformBuffers();
     bool CreateBuffer(VkDeviceSize size,
       VkBufferUsageFlags usage,

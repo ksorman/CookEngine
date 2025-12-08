@@ -3,7 +3,6 @@
 #include "Scene.h"
 #include "VmaUsage.h"
 #include "glm/ext/matrix_transform.hpp"
-#include "utils/GeometryPrimitives.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -11,6 +10,7 @@
 #include <fstream>
 #include <set>
 #include <spdlog/spdlog.h>
+#include <vector>
 #include <vulkan/vulkan_core.h>
 
 #define GLM_FORCE_LEFT_HANDED
@@ -29,7 +29,7 @@ const std::vector<Vertex> vertices = { { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f } 
     { { 0.5f, 0.5f, 0.0f }, { 0.0f, 1.0f } },
     { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f } } };
 
-const std::vector<uint16_t> indices = { 0, 1, 2, 2, 3, 0 };
+const std::vector<uint32_t> indices = { 0, 1, 2, 2, 3, 0 };
 
 void Renderer::Init(GLFWwindow* window)
 {
@@ -51,8 +51,8 @@ void Renderer::Init(GLFWwindow* window)
     CreateDepthBuffer();
     CreateDepthBufferView();
     CreateFramebuffers();
-    CreateVertexBuffer();
-    CreateIndexBuffer();
+    CreateVertexBuffer(vertices, m_vertexBuffer, m_vertexBufferMemory);
+    CreateIndexBuffer(indices, m_indexBuffer, m_indexBufferMemory);
     CreateUniformBuffers();
     CreateTextureImage();
     CreateTextureImageView();
@@ -468,7 +468,7 @@ VkFormat Renderer::FindDepthFormat()
       VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
-void Renderer::CreateVertexBuffer()
+void Renderer::CreateVertexBuffer(const std::vector<Vertex>& vertices, VkBuffer& vertexBuffer, VmaAllocation& vertexBufferMemory)
 {
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
@@ -489,16 +489,16 @@ void Renderer::CreateVertexBuffer()
     CreateBuffer(bufferSize,
       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-      m_vertexBuffer,
-      m_vertexBufferMemory,
+      vertexBuffer,
+      vertexBufferMemory,
       0);
 
-    CopyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
+    CopyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 
     vmaDestroyBuffer(m_vmaAllocator, stagingBuffer, stagingBufferMemory);
 }
 
-void Renderer::CreateIndexBuffer()
+void Renderer::CreateIndexBuffer(const std::vector<uint32_t>& indices, VkBuffer& indexBuffer, VmaAllocation& indexBufferMemory)
 {
     VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
@@ -519,11 +519,11 @@ void Renderer::CreateIndexBuffer()
     CreateBuffer(bufferSize,
       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-      m_indexBuffer,
-      m_indexBufferMemory,
+      indexBuffer,
+      indexBufferMemory,
       0);
 
-    CopyBuffer(stagingBuffer, m_indexBuffer, bufferSize);
+    CopyBuffer(stagingBuffer, indexBuffer, bufferSize);
 
     vmaDestroyBuffer(m_vmaAllocator, stagingBuffer, stagingBufferMemory);
 }
@@ -925,7 +925,7 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     VkDeviceSize offsetsVertex[] = { 0 };
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsetsVertex);
 
-    vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
     vkCmdBindDescriptorSets(commandBuffer,
       VK_PIPELINE_BIND_POINT_GRAPHICS,
