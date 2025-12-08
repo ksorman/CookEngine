@@ -27,6 +27,9 @@ void EngineApi::Init()
 
 void EngineApi::Deinit()
 {
+    m_scene.reset();
+    m_modelLoader.reset();
+
     m_renderer->Deinit();
 }
 

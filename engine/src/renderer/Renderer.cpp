@@ -1,13 +1,16 @@
 #include "Renderer.h"
 #include "Camera.h"
+#include "GPUBuffer.h"
 #include "Scene.h"
 #include "VmaUsage.h"
 #include "glm/ext/matrix_transform.hpp"
+#include "utils/GeometryPrimitives.h"
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <memory>
 #include <set>
 #include <spdlog/spdlog.h>
 #include <vector>
@@ -65,8 +68,10 @@ void Renderer::Init(GLFWwindow* window)
     m_currentFrame = 0;
 }
 
-void Renderer::DrawFrame(const Scene& scene)
+void Renderer::DrawFrame(Scene& scene)
 {
+    InitScene(scene);
+
     vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
@@ -468,7 +473,9 @@ VkFormat Renderer::FindDepthFormat()
       VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
-void Renderer::CreateVertexBuffer(const std::vector<Vertex>& vertices, VkBuffer& vertexBuffer, VmaAllocation& vertexBufferMemory)
+void Renderer::CreateVertexBuffer(const std::vector<Vertex>& vertices,
+  VkBuffer& vertexBuffer,
+  VmaAllocation& vertexBufferMemory)
 {
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
@@ -498,7 +505,9 @@ void Renderer::CreateVertexBuffer(const std::vector<Vertex>& vertices, VkBuffer&
     vmaDestroyBuffer(m_vmaAllocator, stagingBuffer, stagingBufferMemory);
 }
 
-void Renderer::CreateIndexBuffer(const std::vector<uint32_t>& indices, VkBuffer& indexBuffer, VmaAllocation& indexBufferMemory)
+void Renderer::CreateIndexBuffer(const std::vector<uint32_t>& indices,
+  VkBuffer& indexBuffer,
+  VmaAllocation& indexBufferMemory)
 {
     VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
@@ -1532,5 +1541,22 @@ void Renderer::DestroyDepthBuffer()
 void Renderer::DestroyVMAAllocator()
 {
     vmaDestroyAllocator(m_vmaAllocator);
+}
+
+void Renderer::InitScene(Scene& scene)
+{
+    auto view = scene.GetRegistry().view<std::shared_ptr<Model>>();
+    view.each([this](std::shared_ptr<Model>& model) {
+        for (auto& mesh : model->meshes) {
+            if (!mesh.renderInitilized) {
+                mesh.vertexBuffer = std::make_unique<GPUBuffer>(m_vmaAllocator);
+                mesh.vertexBuffer->InitBuffer(*this, mesh.verteces, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+
+                mesh.indexBuffer = std::make_unique<GPUBuffer>(m_vmaAllocator);
+                mesh.indexBuffer->InitBuffer(*this, mesh.indeces, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+                mesh.renderInitilized = true;
+            }
+        }
+    });
 }
 }// namespace CookEngine

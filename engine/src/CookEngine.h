@@ -29,11 +29,11 @@ class EngineApi
 
   protected:
     std::unique_ptr<ModelLoader> m_modelLoader;
-
+    std::unique_ptr<Scene> m_scene;
+    
   private:
     std::unique_ptr<Renderer> m_renderer;
     std::unique_ptr<Window> m_window;
-    std::unique_ptr<Scene> m_scene;
     Utils::EngineTimer m_timer;
     InputHandler m_inputHandler;
 };

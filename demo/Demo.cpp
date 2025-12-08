@@ -3,7 +3,7 @@
 
 void Demo::LoadWorld()
 {
-    m_modelLoader->GetModel(PATH_TO_ASSETS_FOLDER + "/spider.glb");
+   m_scene->AddModel(m_modelLoader->GetModel(PATH_TO_ASSETS_FOLDER + "/spider.glb"));
 }
 
 void Demo::InputCallback(CookEngine::InputHandler::Key key, CookEngine::InputHandler::KeyState action)

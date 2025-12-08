@@ -46,11 +46,12 @@ struct SwapChainSupportDetails
 class Renderer
 {
   public:
-    void Init(GLFWwindow* window);
-    void DrawFrame(const Scene& scene);
-    void Deinit();
-
-    bool& RefToBoolForResize();
+  void Init(GLFWwindow* window);
+  void DrawFrame(Scene& scene);
+  void Deinit();
+  
+  bool& RefToBoolForResize();
+  void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
   private:
     void UpdateUniformBuffer(const Camera& camera, uint32_t currentFrame);
@@ -78,7 +79,6 @@ class Renderer
       VkBuffer& buffer,
       VmaAllocation& bufferAllocation,
       VmaAllocationCreateFlags vmaFlags);
-    void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
     void CreateFramebuffers();
     void CreateDescriptorSetLayout();
@@ -150,6 +150,8 @@ class Renderer
     VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* window);
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+    void InitScene(Scene& scene);
 
   private:
     GLFWwindow* m_window;
