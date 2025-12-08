@@ -1,7 +1,6 @@
 struct PSInput {
     float4 position : SV_Position;
-    [[vk::location(0)]] float3 color : COLOR0;
-    [[vk::location(1)]] float2 tc : TEXCOORD0;
+    [[vk::location(0)]] float2 tc : TEXCOORD0;
 };
 
 struct PSOut {

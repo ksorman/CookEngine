@@ -3,6 +3,7 @@
 #include "Scene.h"
 #include "VmaUsage.h"
 #include "glm/ext/matrix_transform.hpp"
+#include "utils/GeometryPrimitives.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -23,10 +24,10 @@
 #include <chrono>
 
 namespace CookEngine {
-const std::vector<OldVertex> vertices = { { { -0.5f, -0.5f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
-    { { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-    { { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-    { { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } } };
+const std::vector<Vertex> vertices = { { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f } },
+    { { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f } },
+    { { 0.5f, 0.5f, 0.0f }, { 0.0f, 1.0f } },
+    { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f } } };
 
 const std::vector<uint16_t> indices = { 0, 1, 2, 2, 3, 0 };
 
@@ -646,8 +647,8 @@ void Renderer::CreateGraphicsPipeline()
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
-    auto bindingDescription = OldVertex::getBindingDescription();
-    auto attributeDescriptions = OldVertex::getAttributeDescriptions();
+    auto bindingDescription = Vertex::GetBindingDescription();
+    auto attributeDescriptions = Vertex::GetAttributeDescriptions();
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
