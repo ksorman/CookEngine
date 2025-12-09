@@ -25,8 +25,8 @@ std::shared_ptr<Model> ModelLoader::LoadModel(std::string_view modelName)
 
         Mesh* pMesh = &model->meshes[0];
         const aiMesh* pAiMesh = pScene->mMeshes[0];
-        pMesh->verteces.resize(pAiMesh->mNumVertices);
-        pMesh->indeces.resize(pAiMesh->mNumFaces * 3);
+        pMesh->verteces.reserve(pAiMesh->mNumVertices);
+        pMesh->indeces.reserve(pAiMesh->mNumFaces * 3);
 
         const aiVector3D zero3D(0.0f, 0.0f, 0.0f);
 

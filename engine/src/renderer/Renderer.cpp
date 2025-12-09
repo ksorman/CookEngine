@@ -93,7 +93,7 @@ void Renderer::DrawFrame(Scene& scene)
     vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0);
 
     UpdateUniformBuffer(scene.GetCamera(), m_currentFrame);
-    RecordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
+    RecordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex, scene);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -887,7 +887,7 @@ void Renderer::CreateCommandBuffers()
     }
 }
 
-void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, Scene& scene)
 {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -929,24 +929,27 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     scissor.offset = { 0, 0 };
     scissor.extent = m_swapChainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    {
+        auto view = scene.GetRegistry().view<std::shared_ptr<Model>>();
+        Model* model = view->begin()->get();
 
-    VkBuffer vertexBuffers[] = { m_vertexBuffer };
-    VkDeviceSize offsetsVertex[] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsetsVertex);
+        VkBuffer vertexBuffers[] = { model->meshes[0].vertexBuffer->GetBuffer() };
+        VkDeviceSize offsetsVertex[] = { 0 };
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsetsVertex);
 
-    vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(commandBuffer, model->meshes[0].indexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-    vkCmdBindDescriptorSets(commandBuffer,
-      VK_PIPELINE_BIND_POINT_GRAPHICS,
-      m_pipelineLayout,
-      0,
-      1,
-      &m_descriptorSets[m_currentFrame],
-      0,
-      nullptr);
+        vkCmdBindDescriptorSets(commandBuffer,
+          VK_PIPELINE_BIND_POINT_GRAPHICS,
+          m_pipelineLayout,
+          0,
+          1,
+          &m_descriptorSets[m_currentFrame],
+          0,
+          nullptr);
 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
-
+        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model->meshes[0].indeces.size()), 1, 0, 0, 0);
+    }
     vkCmdEndRenderPass(commandBuffer);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -1554,6 +1557,7 @@ void Renderer::InitScene(Scene& scene)
 
                 mesh.indexBuffer = std::make_unique<GPUBuffer>(m_vmaAllocator);
                 mesh.indexBuffer->InitBuffer(*this, mesh.indeces, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+
                 mesh.renderInitilized = true;
             }
         }
