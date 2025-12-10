@@ -23,16 +23,7 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-
-#include <chrono>
-
 namespace CookEngine {
-const std::vector<Vertex> vertices = { { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f } },
-    { { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f } },
-    { { 0.5f, 0.5f, 0.0f }, { 0.0f, 1.0f } },
-    { { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f } } };
-
-const std::vector<uint32_t> indices = { 0, 1, 2, 2, 3, 0 };
 
 void Renderer::Init(GLFWwindow* window)
 {
@@ -54,8 +45,6 @@ void Renderer::Init(GLFWwindow* window)
     CreateDepthBuffer();
     CreateDepthBufferView();
     CreateFramebuffers();
-    CreateVertexBuffer(vertices, m_vertexBuffer, m_vertexBufferMemory);
-    CreateIndexBuffer(indices, m_indexBuffer, m_indexBufferMemory);
     CreateUniformBuffers();
     CreateTextureImage();
     CreateTextureImageView();
@@ -151,8 +140,6 @@ void Renderer::Deinit()
     DestroyTextureImageView();
     DestroyTextureImage();
     DestroyUniformBuffer();
-    DestroyIndexBuffer();
-    DestroyVertexBuffer();
     DestroyCommandPool();
     DestroyFramebuffers();
     DestroyPipeline();
@@ -177,8 +164,10 @@ bool& Renderer::RefToBoolForResize()
 void Renderer::UpdateUniformBuffer(const Camera& camera, uint32_t currentFrame)
 {
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.model = glm::translate(ubo.model, glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::mat4(0.01f);
+    ubo.model[3][3] = 1.0f;
+    ubo.model = glm::rotate(ubo.model, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::translate(ubo.model, glm::vec3(0.0f, 0.0f, 50.0f));
     ubo.view = camera.GetView();
     ubo.proj = camera.GetProj();
 
@@ -471,70 +460,6 @@ VkFormat Renderer::FindDepthFormat()
     return FindSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
       VK_IMAGE_TILING_OPTIMAL,
       VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-}
-
-void Renderer::CreateVertexBuffer(const std::vector<Vertex>& vertices,
-  VkBuffer& vertexBuffer,
-  VmaAllocation& vertexBufferMemory)
-{
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-
-    VkBuffer stagingBuffer;
-    VmaAllocation stagingBufferMemory;
-    CreateBuffer(bufferSize,
-      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-      stagingBuffer,
-      stagingBufferMemory,
-      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-
-    void* data;
-    vmaMapMemory(m_vmaAllocator, stagingBufferMemory, &data);
-    memcpy(data, vertices.data(), (size_t)bufferSize);
-    vmaUnmapMemory(m_vmaAllocator, stagingBufferMemory);
-
-    CreateBuffer(bufferSize,
-      VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-      vertexBuffer,
-      vertexBufferMemory,
-      0);
-
-    CopyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-
-    vmaDestroyBuffer(m_vmaAllocator, stagingBuffer, stagingBufferMemory);
-}
-
-void Renderer::CreateIndexBuffer(const std::vector<uint32_t>& indices,
-  VkBuffer& indexBuffer,
-  VmaAllocation& indexBufferMemory)
-{
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-
-    VkBuffer stagingBuffer;
-    VmaAllocation stagingBufferMemory;
-    CreateBuffer(bufferSize,
-      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-      stagingBuffer,
-      stagingBufferMemory,
-      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-
-    void* data;
-    vmaMapMemory(m_vmaAllocator, stagingBufferMemory, &data);
-    memcpy(data, indices.data(), (size_t)bufferSize);
-    vmaUnmapMemory(m_vmaAllocator, stagingBufferMemory);
-
-    CreateBuffer(bufferSize,
-      VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-      indexBuffer,
-      indexBufferMemory,
-      0);
-
-    CopyBuffer(stagingBuffer, indexBuffer, bufferSize);
-
-    vmaDestroyBuffer(m_vmaAllocator, stagingBuffer, stagingBufferMemory);
 }
 
 void Renderer::CreateUniformBuffers()
@@ -1491,16 +1416,6 @@ void Renderer::DestroySyncObjects()
 void Renderer::DestroyTextureImage()
 {
     vmaDestroyImage(m_vmaAllocator, m_textureImage, m_textureImageMemory);
-}
-
-void Renderer::DestroyVertexBuffer()
-{
-    vmaDestroyBuffer(m_vmaAllocator, m_vertexBuffer, m_vertexBufferMemory);
-}
-
-void Renderer::DestroyIndexBuffer()
-{
-    vmaDestroyBuffer(m_vmaAllocator, m_indexBuffer, m_indexBufferMemory);
 }
 
 void Renderer::DestroyUniformBuffer()

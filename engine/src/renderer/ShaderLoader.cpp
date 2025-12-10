@@ -62,7 +62,7 @@ Shader ShaderLoader::LoadShader(const std::wstring& fileName)
         }
     }
 
-    std::vector<LPCWSTR> arguments = { fileName.c_str(), L"-E", L"main", L"-T", targetProfile, L"-spirv" };
+    std::vector<LPCWSTR> arguments = { fileName.c_str(), L"-E", L"main", L"-T", targetProfile, L"-spirv", L"-Zi" };
 
     DxcBuffer buffer{};
     buffer.Encoding = DXC_CP_ACP;

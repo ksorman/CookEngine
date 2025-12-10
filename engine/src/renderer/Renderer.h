@@ -70,8 +70,6 @@ class Renderer
       FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
     VkFormat FindDepthFormat();
 
-    void CreateVertexBuffer(const std::vector<Vertex>& vertices, VkBuffer& vertexBuffer, VmaAllocation& vertexBufferMemory);
-    void CreateIndexBuffer(const std::vector<uint32_t>& indices, VkBuffer& indexBuffer, VmaAllocation& indexBufferMemory);
     void CreateUniformBuffers();
     bool CreateBuffer(VkDeviceSize size,
       VkBufferUsageFlags usage,
@@ -132,8 +130,6 @@ class Renderer
     void DestroyCommandPool();
     void DestroySyncObjects();
     void DestroyTextureImage();
-    void DestroyVertexBuffer();
-    void DestroyIndexBuffer();
     void DestroyUniformBuffer();
     void DestroyDescriptorPool();
     void DestroyDescriptorSets();
@@ -186,11 +182,6 @@ class Renderer
     bool framebufferResized = false;
 
     int32_t m_currentFrame;
-
-    VkBuffer m_vertexBuffer;
-    VmaAllocation m_vertexBufferMemory;
-    VkBuffer m_indexBuffer;
-    VmaAllocation m_indexBufferMemory;
 
     VkDescriptorPool m_descriptorPool;
     std::vector<VkDescriptorSet> m_descriptorSets;

@@ -33,7 +33,7 @@ class Camera
     glm::vec3 m_rotationEulers;
     
     float m_zNear = 0.1f;
-    float m_zFar = 10.0f;
+    float m_zFar = 1000.0f;
 
     glm::mat4 m_view;
     glm::mat4 m_proj;

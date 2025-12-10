@@ -17,7 +17,8 @@ std::shared_ptr<Model> ModelLoader::LoadModel(std::string_view modelName)
     Assimp::Importer importer;
 
     const aiScene* pScene = importer.ReadFile(std::string(modelName).c_str(),
-      aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices);
+      aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices
+        | aiProcess_MakeLeftHanded);
 
     if (pScene && pScene->mNumMeshes) {
         std::shared_ptr<Model> model = std::make_shared<Model>();
