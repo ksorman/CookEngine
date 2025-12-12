@@ -142,7 +142,7 @@ void Renderer::Deinit()
     DestroyUniformBuffer();
     DestroyCommandPool();
     DestroyFramebuffers();
-    DestroyPipeline();
+    m_graphicsPipeline.DestroyPipeline();
     DestroyRenderPass();
     DestroyDescriptorSetLayout();
     DestroyPipelineLayout();
@@ -696,12 +696,7 @@ void Renderer::CreateGraphicsPipeline()
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;// Optional
     pipelineInfo.basePipelineIndex = -1;// Optional
 
-    if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline)
-        != VK_SUCCESS) {
-        spdlog::error("[Vulkan] Failed to create graphics pipeline!");
-    } else {
-        spdlog::info("[Vulkan] Graphics pipeline created successfully!");
-    }
+    m_graphicsPipeline.CreatePipeline(m_device, &pipelineInfo);
 }
 
 VkShaderModule Renderer::CreateShaderModule(const std::vector<char>& code)
@@ -839,7 +834,7 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline.GetPipeline());
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -1387,11 +1382,6 @@ void Renderer::DestroyPipelineLayout()
 void Renderer::DestroyDescriptorSetLayout()
 {
     vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
-}
-
-void Renderer::DestroyPipeline()
-{
-    vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
 }
 
 void Renderer::DestroyRenderPass()

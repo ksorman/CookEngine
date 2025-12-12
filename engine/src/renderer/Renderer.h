@@ -10,6 +10,7 @@
 #include "ShaderLoader.h"
 #include "VmaUsage.h"
 #include "utils/GeometryPrimitives.h"
+#include "Pipeline.h"
 #define GLFW_INCLUDE_VULKAN
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include "GLFW/glfw3.h"
@@ -126,7 +127,6 @@ class Renderer
     void DestroyRenderPass();
     void DestroyPipelineLayout();
     void DestroyDescriptorSetLayout();
-    void DestroyPipeline();
     void DestroyCommandPool();
     void DestroySyncObjects();
     void DestroyTextureImage();
@@ -169,7 +169,7 @@ class Renderer
     VkDescriptorSetLayout m_descriptorSetLayout;
     VkPipelineLayout m_pipelineLayout;
 
-    VkPipeline m_graphicsPipeline;
+    Pipeline m_graphicsPipeline;
 
     VkCommandPool m_commandPool;
 
