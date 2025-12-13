@@ -116,7 +116,6 @@ class Renderer
     VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectMask);
 
     void CreateTextureSampler();
-    static std::vector<char> ReadFile(const std::string& filename);
 
     void DestroyInstance();
     void DestroySurface();
