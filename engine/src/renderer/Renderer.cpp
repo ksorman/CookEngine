@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <fstream>
 #include <memory>
 #include <set>
 #include <spdlog/spdlog.h>
