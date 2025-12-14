@@ -64,12 +64,12 @@ void Renderer::DrawFrame(Scene& scene)
     vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
+
     VkResult result = vkAcquireNextImageKHR(
       m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE, &imageIndex);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || framebufferResized) {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         spdlog::info("[Vulkan] Framebuffer was resized: {}", framebufferResized);
-        framebufferResized = false;
         RecreateSwapchain();
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -103,7 +103,6 @@ void Renderer::DrawFrame(Scene& scene)
     if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]) != VK_SUCCESS) {
         spdlog::error("[Vulkan] Failed to submit draw command buffer!");
     }
-
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
