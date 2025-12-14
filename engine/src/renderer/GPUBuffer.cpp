@@ -1,4 +1,5 @@
 #include "GPUBuffer.h"
+#include "RHIBuffer.h"
 #include "VmaUsage.h"
 #include <spdlog/spdlog.h>
 
@@ -9,13 +10,8 @@ GPUBuffer::~GPUBuffer()
     DestroyBuffer();
 }
 
-VkBuffer& GPUBuffer::GetBuffer() {
+RHIBuffer& GPUBuffer::GetBuffer() {
     return m_buffer;
-}
-
-VmaAllocation& GPUBuffer::GetAllocation()
-{
-    return m_bufferMemory;
 }
 
 void GPUBuffer::CreateBuffer(VkDeviceSize size,
@@ -23,26 +19,11 @@ void GPUBuffer::CreateBuffer(VkDeviceSize size,
   VkMemoryPropertyFlags property,
   VmaAllocationCreateFlags vmaFlags)
 {
-    VmaAllocationCreateInfo allocInfo{};
-    allocInfo.flags = vmaFlags;
-    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    allocInfo.requiredFlags = property;
-
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo, &m_buffer, &m_bufferMemory, nullptr) != VK_SUCCESS) {
-        spdlog::error("[Vulkan] Failed to create buffer!");
-    }
+    m_buffer = m_RHICmdList.CreateBuffer(size, usage, property, vmaFlags);
 }
 
 void GPUBuffer::DestroyBuffer()
 {
-    //TODO [k.samokhvalov] It is tmp fix
-    vkDeviceWaitIdle(m_device);
-    vmaDestroyBuffer(m_allocator, m_buffer, m_bufferMemory);
+    m_RHICmdList.DestroyBuffer(m_buffer);
 }
 }// namespace CookEngine

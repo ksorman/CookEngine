@@ -3,14 +3,17 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "Pipeline.h"
+#include "RHIBuffer.h"
 #include "ShaderLoader.h"
 #include "VmaUsage.h"
 #include "utils/GeometryPrimitives.h"
+#include "RHI.h"
 
 #define GLFW_INCLUDE_VULKAN
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -56,7 +59,7 @@ class Renderer
     bool& RefToBoolForResize();
     void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     VkDevice& GetDevice();
-
+    RHI* GetRHICmdList();
   private:
     void UpdateUniformBuffer(const Camera& camera, uint32_t currentFrame);
 
@@ -75,12 +78,6 @@ class Renderer
     VkFormat FindDepthFormat();
 
     void CreateUniformBuffers();
-    bool CreateBuffer(VkDeviceSize size,
-      VkBufferUsageFlags usage,
-      VkMemoryPropertyFlags properties,
-      VkBuffer& buffer,
-      VmaAllocation& bufferAllocation,
-      VmaAllocationCreateFlags vmaFlags);
 
     void CreateFramebuffers();
     void CreateDescriptorSetLayout();
@@ -187,8 +184,7 @@ class Renderer
     VkDescriptorPool m_descriptorPool;
     std::vector<VkDescriptorSet> m_descriptorSets;
 
-    std::vector<VkBuffer> m_uniformBuffers;
-    std::vector<VmaAllocation> m_uniformBuffersMemory;
+    std::vector<RHIBuffer> m_uniformBuffers;
     std::vector<void*> m_uniformBuffersMapped;
 
     VkImage m_textureImage;
@@ -203,6 +199,8 @@ class Renderer
 
     VmaAllocator m_vmaAllocator;
     ShaderLoader m_shaderLoader;
+
+    std::unique_ptr<RHI> m_RHICmdList;
 
     const int MAX_FRAMES_IN_FLIGHT = 2;
 

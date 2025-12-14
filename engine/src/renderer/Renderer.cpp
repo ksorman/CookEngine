@@ -1,6 +1,7 @@
 #include "Renderer.h"
 #include "Camera.h"
 #include "GPUBuffer.h"
+#include "RHIBuffer.h"
 #include "Scene.h"
 #include "VmaUsage.h"
 #include "glm/ext/matrix_transform.hpp"
@@ -35,6 +36,7 @@ void Renderer::Init(GLFWwindow* window)
     CreateLogicalDevice();
     m_shaderLoader.Init(m_device);
     CreateVMAAllocator();
+    m_RHICmdList = std::make_unique<RHI>(m_vmaAllocator, m_device);
     auto format = CreateSwapchain(m_window);
     CreateImageView(format);
     CreateRenderPass(format);
@@ -464,43 +466,15 @@ void Renderer::CreateUniformBuffers()
     VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
     m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-    m_uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
     m_uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        CreateBuffer(bufferSize,
+        m_uniformBuffers[i] = m_RHICmdList->CreateBuffer(bufferSize,
           VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-          m_uniformBuffers[i],
-          m_uniformBuffersMemory[i],
           VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-        vmaMapMemory(m_vmaAllocator, m_uniformBuffersMemory[i], &m_uniformBuffersMapped[i]);
+        vmaMapMemory(m_vmaAllocator, m_uniformBuffers[i].bufferAllocation, &m_uniformBuffersMapped[i]);
     }
-}
-
-bool Renderer::CreateBuffer(VkDeviceSize size,
-  VkBufferUsageFlags usage,
-  VkMemoryPropertyFlags properties,
-  VkBuffer& buffer,
-  VmaAllocation& bufferAllocation,
-  VmaAllocationCreateFlags vmaFlags)
-{
-    VmaAllocationCreateInfo allocInfo{};
-    allocInfo.flags = vmaFlags;
-    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    allocInfo.requiredFlags = properties;
-
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vmaCreateBuffer(m_vmaAllocator, &bufferInfo, &allocInfo, &buffer, &bufferAllocation, nullptr) != VK_SUCCESS) {
-        spdlog::error("[Vulkan] Failed to create buffer!");
-        return false;
-    }
-    return true;
 }
 
 void Renderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
@@ -517,6 +491,11 @@ void Renderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize s
 VkDevice& Renderer::GetDevice()
 {
     return m_device;
+}
+
+RHI* Renderer::GetRHICmdList()
+{
+    return m_RHICmdList.get();
 }
 
 void Renderer::CreateFramebuffers()
@@ -855,11 +834,11 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
         auto view = scene.GetRegistry().view<std::shared_ptr<Model>>();
         Model* model = view->begin()->get();
 
-        VkBuffer vertexBuffers[] = { model->meshes[0].vertexBuffer->GetBuffer() };
+        VkBuffer vertexBuffers[] = { model->meshes[0].vertexBuffer->GetBuffer().buffer };
         VkDeviceSize offsetsVertex[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsetsVertex);
 
-        vkCmdBindIndexBuffer(commandBuffer, model->meshes[0].indexBuffer->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(commandBuffer, model->meshes[0].indexBuffer->GetBuffer().buffer, 0, VK_INDEX_TYPE_UINT32);
 
         vkCmdBindDescriptorSets(commandBuffer,
           VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -949,7 +928,7 @@ void Renderer::CreateDescriptorSets()
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = m_uniformBuffers[i];
+        bufferInfo.buffer = m_uniformBuffers[i].buffer;
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UniformBufferObject);
 
@@ -1033,20 +1012,17 @@ void Renderer::CreateTextureImage()
         spdlog::error("[Vulkan] Failed to load texture image!");
     }
 
-    VkBuffer stagingBuffer;
-    VmaAllocation stagingBufferMemory;
-    CreateBuffer(imageSize,
+    RHIBuffer stagingBuffer = 
+    m_RHICmdList->CreateBuffer(imageSize,
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-      stagingBuffer,
-      stagingBufferMemory,
       VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
 
     void* data;
 
-    vmaMapMemory(m_vmaAllocator, stagingBufferMemory, &data);
+    vmaMapMemory(m_vmaAllocator, stagingBuffer.bufferAllocation, &data);
     memcpy(data, pixels, (size_t)imageSize);
-    vmaUnmapMemory(m_vmaAllocator, stagingBufferMemory);
+    vmaUnmapMemory(m_vmaAllocator, stagingBuffer.bufferAllocation);
 
     stbi_image_free(pixels);
 
@@ -1063,14 +1039,14 @@ void Renderer::CreateTextureImage()
     TransitionImageLayout(
       m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    CopyBufferToImage(stagingBuffer, m_textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+    CopyBufferToImage(stagingBuffer.buffer, m_textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
 
     TransitionImageLayout(m_textureImage,
       VK_FORMAT_R8G8B8A8_SRGB,
       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    vmaDestroyBuffer(m_vmaAllocator, stagingBuffer, stagingBufferMemory);
+    vmaDestroyBuffer(m_vmaAllocator, stagingBuffer.buffer, stagingBuffer.bufferAllocation);
 }
 
 bool Renderer::HasStencilComponent(VkFormat format)
@@ -1394,8 +1370,8 @@ void Renderer::DestroyTextureImage()
 void Renderer::DestroyUniformBuffer()
 {
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vmaUnmapMemory(m_vmaAllocator, m_uniformBuffersMemory[i]);
-        vmaDestroyBuffer(m_vmaAllocator, m_uniformBuffers[i], m_uniformBuffersMemory[i]);
+        vmaUnmapMemory(m_vmaAllocator, m_uniformBuffers[i].bufferAllocation);
+        vmaDestroyBuffer(m_vmaAllocator, m_uniformBuffers[i].buffer, m_uniformBuffers[i].bufferAllocation);
     }
 }
 
@@ -1435,10 +1411,10 @@ void Renderer::InitScene(Scene& scene)
     view.each([this](std::shared_ptr<Model>& model) {
         for (auto& mesh : model->meshes) {
             if (!mesh.renderInitilized) {
-                mesh.vertexBuffer = std::make_unique<GPUBuffer>(m_vmaAllocator, m_device);
+                mesh.vertexBuffer = std::make_unique<GPUBuffer>(*m_RHICmdList);
                 mesh.vertexBuffer->InitBuffer(*this, mesh.verteces, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
-                mesh.indexBuffer = std::make_unique<GPUBuffer>(m_vmaAllocator, m_device);
+                mesh.indexBuffer = std::make_unique<GPUBuffer>(*m_RHICmdList);
                 mesh.indexBuffer->InitBuffer(*this, mesh.indeces, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 
                 mesh.renderInitilized = true;
