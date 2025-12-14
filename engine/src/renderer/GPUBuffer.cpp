@@ -41,6 +41,8 @@ void GPUBuffer::CreateBuffer(VkDeviceSize size,
 
 void GPUBuffer::DestroyBuffer()
 {
+    //TODO [k.samokhvalov] It is tmp fix
+    vkDeviceWaitIdle(m_device);
     vmaDestroyBuffer(m_allocator, m_buffer, m_bufferMemory);
 }
 }// namespace CookEngine

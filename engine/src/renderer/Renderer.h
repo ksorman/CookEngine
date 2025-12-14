@@ -7,15 +7,17 @@
 #include <string>
 #include <vector>
 
+#include "Pipeline.h"
 #include "ShaderLoader.h"
 #include "VmaUsage.h"
 #include "utils/GeometryPrimitives.h"
-#include "Pipeline.h"
+
 #define GLFW_INCLUDE_VULKAN
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include "GLFW/glfw3.h"
-#include <GLFW/glfw3native.h>
 #include "utils/MathUsage.h"
+#include <GLFW/glfw3native.h>
+
 
 namespace CookEngine {
 
@@ -47,12 +49,13 @@ struct SwapChainSupportDetails
 class Renderer
 {
   public:
-  void Init(GLFWwindow* window);
-  void DrawFrame(Scene& scene);
-  void Deinit();
-  
-  bool& RefToBoolForResize();
-  void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+    void Init(GLFWwindow* window);
+    void DrawFrame(Scene& scene);
+    void Deinit();
+
+    bool& RefToBoolForResize();
+    void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+    VkDevice& GetDevice();
 
   private:
     void UpdateUniformBuffer(const Camera& camera, uint32_t currentFrame);

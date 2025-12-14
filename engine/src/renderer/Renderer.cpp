@@ -517,6 +517,11 @@ void Renderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize s
     EndSingleTimeCommands(commandBuffer);
 }
 
+VkDevice& Renderer::GetDevice()
+{
+    return m_device;
+}
+
 void Renderer::CreateFramebuffers()
 {
     m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
@@ -1438,10 +1443,10 @@ void Renderer::InitScene(Scene& scene)
     view.each([this](std::shared_ptr<Model>& model) {
         for (auto& mesh : model->meshes) {
             if (!mesh.renderInitilized) {
-                mesh.vertexBuffer = std::make_unique<GPUBuffer>(m_vmaAllocator);
+                mesh.vertexBuffer = std::make_unique<GPUBuffer>(m_vmaAllocator, m_device);
                 mesh.vertexBuffer->InitBuffer(*this, mesh.verteces, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
-                mesh.indexBuffer = std::make_unique<GPUBuffer>(m_vmaAllocator);
+                mesh.indexBuffer = std::make_unique<GPUBuffer>(m_vmaAllocator, m_device);
                 mesh.indexBuffer->InitBuffer(*this, mesh.indeces, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 
                 mesh.renderInitilized = true;
