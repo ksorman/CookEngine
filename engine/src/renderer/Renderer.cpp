@@ -134,7 +134,6 @@ void Renderer::Deinit()
 
     spdlog::info("[Vulkan] Reneder Deinit");
     DestroySyncObjects();
-    DestroyDescriptorSetLayout();
     DestroyDescriptorPool();
     DestroyTextureSampler();
     DestroyTextureImageView();
@@ -1405,11 +1404,6 @@ void Renderer::DestroyUniformBuffer()
 void Renderer::DestroyDescriptorPool()
 {
     vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
-}
-
-void Renderer::DestroyDescriptorSets()
-{
-    vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
 }
 
 void Renderer::DestroyTextureImageView()

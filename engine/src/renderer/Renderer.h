@@ -134,7 +134,6 @@ class Renderer
     void DestroyTextureImage();
     void DestroyUniformBuffer();
     void DestroyDescriptorPool();
-    void DestroyDescriptorSets();
     void DestroyTextureImageView();
     void DestroyDepthBufferView();
     void DestroyTextureSampler();
