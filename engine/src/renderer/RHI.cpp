@@ -1,4 +1,5 @@
 #include "RHI.h"
+#include "CommandPool.h"
 #include "RHIBuffer.h"
 #include "VmaUsage.h"
 #include "spdlog/spdlog.h"
@@ -39,5 +40,10 @@ void RHI::DestroyBuffer(RHIBuffer& buffer)
 VmaAllocator& RHI::GetAllocator()
 {
     return m_vmaAllocator;
+}
+
+CommandPool& RHI::GetCommandPool()
+{
+    return m_commandPool;
 }
 }// namespace CookEngine

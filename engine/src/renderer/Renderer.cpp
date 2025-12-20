@@ -36,13 +36,12 @@ void Renderer::Init(GLFWwindow* window)
     CreateLogicalDevice();
     m_shaderLoader.Init(m_device);
     CreateVMAAllocator();
-    m_RHICmdList = std::make_unique<RHI>(m_vmaAllocator, m_device);
+    m_RHICmdList = std::make_unique<RHI>(m_vmaAllocator, m_device, ChooseQueue().graphicsFamily.value());
     auto format = CreateSwapchain(m_window);
     CreateImageView(format);
     CreateRenderPass(format);
     CreateDescriptorSetLayout();
     CreateGraphicsPipeline();
-    CreateCommandPool();
     CreateDepthBuffer();
     CreateDepthBufferView();
     CreateFramebuffers();
@@ -139,7 +138,6 @@ void Renderer::Deinit()
     DestroyTextureImageView();
     DestroyTextureImage();
     DestroyUniformBuffer();
-    DestroyCommandPool();
     DestroyFramebuffers();
     m_graphicsPipeline.DestroyPipeline();
     DestroyRenderPass();
@@ -149,6 +147,7 @@ void Renderer::Deinit()
     DestroyDepthBuffer();
     DestroyImageView();
     DestroySwapchain();
+    m_RHICmdList.reset();
     DestroyVMAAllocator();
     DestroyDevice();
     DestroySurface();
@@ -759,27 +758,13 @@ void Renderer::CreateRenderPass(const VkFormat& format)
     }
 }
 
-void Renderer::CreateCommandPool()
-{
-    QueueFamilyIndices queueFamilyIndices = ChooseQueue();
-
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-
-    if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool) == VK_SUCCESS) {
-        spdlog::info("[Vulkan] Command pool created successfully");
-    }
-}
-
 void Renderer::CreateCommandBuffers()
 {
     m_commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = m_commandPool;
+    allocInfo.commandPool = m_RHICmdList->GetCommandPool();
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = static_cast<uint32_t>(m_commandBuffers.size());
 
@@ -863,7 +848,7 @@ VkCommandBuffer Renderer::BeginSingleTimeCommands()
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = m_commandPool;
+    allocInfo.commandPool = m_RHICmdList->GetCommandPool();
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
@@ -890,7 +875,7 @@ void Renderer::EndSingleTimeCommands(VkCommandBuffer commandBuffer)
     vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(m_graphicsQueue);
 
-    vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
+    vkFreeCommandBuffers(m_device, m_RHICmdList->GetCommandPool(), 1, &commandBuffer);
 }
 
 void Renderer::CreateDescriptorPool()
@@ -1012,8 +997,7 @@ void Renderer::CreateTextureImage()
         spdlog::error("[Vulkan] Failed to load texture image!");
     }
 
-    RHIBuffer stagingBuffer = 
-    m_RHICmdList->CreateBuffer(imageSize,
+    RHIBuffer stagingBuffer = m_RHICmdList->CreateBuffer(imageSize,
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
@@ -1039,7 +1023,8 @@ void Renderer::CreateTextureImage()
     TransitionImageLayout(
       m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    CopyBufferToImage(stagingBuffer.buffer, m_textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+    CopyBufferToImage(
+      stagingBuffer.buffer, m_textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
 
     TransitionImageLayout(m_textureImage,
       VK_FORMAT_R8G8B8A8_SRGB,
@@ -1346,11 +1331,6 @@ void Renderer::DestroyDescriptorSetLayout()
 void Renderer::DestroyRenderPass()
 {
     vkDestroyRenderPass(m_device, m_renderPass, nullptr);
-}
-
-void Renderer::DestroyCommandPool()
-{
-    vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 }
 
 void Renderer::DestroySyncObjects()

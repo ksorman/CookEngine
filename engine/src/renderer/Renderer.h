@@ -84,8 +84,7 @@ class Renderer
     void CreateGraphicsPipeline();
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
     void CreateRenderPass(const VkFormat& format);
-
-    void CreateCommandPool();
+    
     void CreateCommandBuffers();
     void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, Scene& scene);
     VkCommandBuffer BeginSingleTimeCommands();
@@ -126,7 +125,6 @@ class Renderer
     void DestroyRenderPass();
     void DestroyPipelineLayout();
     void DestroyDescriptorSetLayout();
-    void DestroyCommandPool();
     void DestroySyncObjects();
     void DestroyTextureImage();
     void DestroyUniformBuffer();
@@ -168,8 +166,6 @@ class Renderer
     VkPipelineLayout m_pipelineLayout;
 
     Pipeline m_graphicsPipeline;
-
-    VkCommandPool m_commandPool;
 
     std::vector<VkCommandBuffer> m_commandBuffers;
 
