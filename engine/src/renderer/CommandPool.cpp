@@ -20,7 +20,7 @@ namespace CookEngine {
         spdlog::debug("[Vulkan] Command pool destroyed successfully");
     }
 
-    CommandPool::operator VkCommandPool()
+    CommandPool::operator VkCommandPool&()
     {
         return m_commandPool;
     }

@@ -32,7 +32,7 @@ class GPUBuffer
 
         CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
 
-        renderer.CopyBuffer(stagingBuffer.GetBuffer().buffer, m_buffer.buffer, bufferSize);
+        renderer.GetRHICmdList()->CopyBuffer(stagingBuffer.GetBuffer().buffer, m_buffer.buffer, bufferSize);
 
     }
 

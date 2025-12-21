@@ -19,9 +19,12 @@ class RHI
       VmaAllocationCreateFlags vmaFlags);
 
     void DestroyBuffer(RHIBuffer& buffer);
+    void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
     VkCommandBuffer BeginSingleTimeCommands();
     void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
+
+
 
     VmaAllocator& GetAllocator();
     CommandPool& GetCommandPool();

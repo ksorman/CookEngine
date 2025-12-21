@@ -44,6 +44,17 @@ void RHI::DestroyBuffer(RHIBuffer& buffer)
     vmaDestroyBuffer(m_vmaAllocator, buffer.buffer, buffer.bufferAllocation);
 }
 
+void RHI::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+{
+    VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
+
+    VkBufferCopy copyRegion{};
+    copyRegion.size = size;
+    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+    EndSingleTimeCommands(commandBuffer);
+}
+
 VkCommandBuffer RHI::BeginSingleTimeCommands()
 {
     VkCommandBufferAllocateInfo allocInfo{};

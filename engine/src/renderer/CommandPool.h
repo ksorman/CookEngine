@@ -10,7 +10,7 @@ class CommandPool
   public:
     CommandPool(VkDevice& device, uint32_t quequeIndex);
     ~CommandPool();
-    operator VkCommandPool();
+    operator VkCommandPool&();
   private:
     VkCommandPool m_commandPool;
     VkDevice& m_device;

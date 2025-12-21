@@ -35,7 +35,7 @@ void Pipeline::DestroyPipeline()
     }
 }
 
-VkPipeline& Pipeline::GetPipeline()
+Pipeline::operator VkPipeline&()
 {
     return m_pipeline;
 }

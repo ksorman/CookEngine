@@ -10,7 +10,7 @@ class Pipeline
     ~Pipeline();
     bool CreatePipeline(VkDevice& device, const VkGraphicsPipelineCreateInfo* createInfo);
     void DestroyPipeline();
-    VkPipeline& GetPipeline();
+    operator VkPipeline&();
 
   private:
     VkPipeline m_pipeline;

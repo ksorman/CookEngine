@@ -57,7 +57,7 @@ class Renderer
     void Deinit();
 
     bool& RefToBoolForResize();
-    void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
     VkDevice& GetDevice();
     RHI* GetRHICmdList();
   private:
