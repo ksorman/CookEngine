@@ -87,8 +87,6 @@ class Renderer
     
     void CreateCommandBuffers();
     void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, Scene& scene);
-    VkCommandBuffer BeginSingleTimeCommands();
-    void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
     void CreateDescriptorPool();
     void CreateDescriptorSets();
