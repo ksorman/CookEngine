@@ -8,6 +8,7 @@ namespace CookEngine {
         public:
         VulkanAllocator(VkPhysicalDevice physicalDevice, VkDevice device, VkInstance instance);
         ~VulkanAllocator();
+        operator VmaAllocator();
         private:
             VmaAllocator m_allocator;
     };

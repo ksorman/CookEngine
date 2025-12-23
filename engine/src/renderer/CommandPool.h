@@ -8,12 +8,12 @@ namespace CookEngine {
 class CommandPool
 {
   public:
-    CommandPool(VkDevice& device, uint32_t quequeIndex);
+    CommandPool(VkDevice device, uint32_t quequeIndex);
     ~CommandPool();
     operator VkCommandPool&();
   private:
     VkCommandPool m_commandPool;
-    VkDevice& m_device;
+    VkDevice m_device;
 };
 
 

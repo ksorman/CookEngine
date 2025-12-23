@@ -2,16 +2,20 @@
 #define RHI_H
 
 #include "CommandPool.h"
+#include "Device.h"
+#include "Instance.h"
+#include "PhysicalDevice.h"
+#include "Queue.h"
 #include "RHIBuffer.h"
+#include "Surface.h"
 #include "VmaUsage.h"
-#include <cstdint>
-
+#include "VulkanAllocator.h"
 
 namespace CookEngine {
 class RHI
 {
   public:
-    RHI(VmaAllocator& vmaAllocator, VkDevice& device, uint32_t graphicQuequeIndex);
+    RHI(GLFWwindow* window);
 
     RHIBuffer CreateBuffer(VkDeviceSize size,
       VkBufferUsageFlags usage,
@@ -24,14 +28,21 @@ class RHI
     VkCommandBuffer BeginSingleTimeCommands();
     void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
-    VmaAllocator& GetAllocator();
+    Instance& GetInstance();
+    Surface& GetSurface();
+    PhysicalDevice& GetPhysicalDevice();
+    Device& GetDevice();
+    Queue& GetQueue();
+    VmaAllocator GetAllocator();
     CommandPool& GetCommandPool();
 
   private:
-    VmaAllocator& m_vmaAllocator;
-    VkDevice& m_device;
-
-    VkQueue m_graphicsQueue;
+    Instance m_instance;
+    Surface m_surface;
+    PhysicalDevice m_physicalDevice;
+    Device m_device;
+    VulkanAllocator m_vulkanAllocator;
+    Queue m_queue;
 
     CommandPool m_commandPool;
 };

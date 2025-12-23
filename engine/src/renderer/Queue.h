@@ -22,6 +22,10 @@ class Queue
     Queue(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, VkDevice device);
     static QueueFamilyIndices ChooseQueue(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
     static std::vector<VkDeviceQueueCreateInfo> CreateQueueInfosForLogicalDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
+
+    VkQueue GetGraphicQueue();
+    VkQueue GetPresentQueue();
+    uint32_t GetGraphicQueueIndex();
   private:
     QueueFamilyIndices m_queueFamilyIndices;
 

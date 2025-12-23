@@ -8,9 +8,9 @@ Pipeline::~Pipeline()
     DestroyPipeline();
 }
 
-bool Pipeline::CreatePipeline(VkDevice& device, const VkGraphicsPipelineCreateInfo* createInfo)
+bool Pipeline::CreatePipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* createInfo)
 {
-    m_device = &device;
+    m_device = device;
 
     if (!createInfo) {
         spdlog::error("[Vulkan] Failed to create graphics pipeline! Create Info is Null!");
@@ -30,7 +30,7 @@ bool Pipeline::CreatePipeline(VkDevice& device, const VkGraphicsPipelineCreateIn
 void Pipeline::DestroyPipeline()
 {
     if (m_isInitialized) {
-        vkDestroyPipeline(*m_device, m_pipeline, nullptr);
+        vkDestroyPipeline(m_device, m_pipeline, nullptr);
         m_isInitialized = false;
     }
 }

@@ -1,16 +1,21 @@
 #include "RHI.h"
 #include "CommandPool.h"
+#include "Device.h"
+#include "Instance.h"
+#include "PhysicalDevice.h"
+#include "Queue.h"
 #include "RHIBuffer.h"
+#include "Surface.h"
 #include "VmaUsage.h"
 #include "spdlog/spdlog.h"
 
 namespace CookEngine {
-RHI::RHI(VmaAllocator& vmaAllocator, VkDevice& device, uint32_t graphicQuequeIndex)
-  : m_vmaAllocator(vmaAllocator), m_device(device), m_commandPool(device, graphicQuequeIndex)
-{
-    vkGetDeviceQueue(m_device, graphicQuequeIndex, 0, &m_graphicsQueue);
-}
 
+RHI::RHI(GLFWwindow* window)
+  : m_instance(), m_surface(m_instance, window), m_physicalDevice(m_instance), m_device(m_physicalDevice, m_surface),
+    m_vulkanAllocator(m_physicalDevice, m_device, m_instance), m_queue(m_physicalDevice, m_surface, m_device),
+    m_commandPool(m_device, m_queue.GetGraphicQueueIndex())
+{}
 
 RHIBuffer RHI::CreateBuffer(VkDeviceSize size,
   VkBufferUsageFlags usage,
@@ -30,7 +35,7 @@ RHIBuffer RHI::CreateBuffer(VkDeviceSize size,
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vmaCreateBuffer(m_vmaAllocator, &bufferInfo, &allocInfo, &buffer.buffer, &buffer.bufferAllocation, nullptr)
+    if (vmaCreateBuffer(m_vulkanAllocator, &bufferInfo, &allocInfo, &buffer.buffer, &buffer.bufferAllocation, nullptr)
         != VK_SUCCESS) {
         spdlog::error("[Vulkan] Failed to create buffer!");
     }
@@ -41,7 +46,7 @@ void RHI::DestroyBuffer(RHIBuffer& buffer)
 {
     // TODO [k.samokhvalov] It is tmp fix
     vkDeviceWaitIdle(m_device);
-    vmaDestroyBuffer(m_vmaAllocator, buffer.buffer, buffer.bufferAllocation);
+    vmaDestroyBuffer(m_vulkanAllocator, buffer.buffer, buffer.bufferAllocation);
 }
 
 void RHI::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
@@ -84,15 +89,40 @@ void RHI::EndSingleTimeCommands(VkCommandBuffer commandBuffer)
     submitInfo.pCommandBuffers = &commandBuffer;
     submitInfo.commandBufferCount = 1;
 
-    vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(m_graphicsQueue);
+    vkQueueSubmit(m_queue.GetGraphicQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(m_queue.GetGraphicQueue());
 
     vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
 }
 
-VmaAllocator& RHI::GetAllocator()
+Instance& RHI::GetInstance()
 {
-    return m_vmaAllocator;
+    return m_instance;
+}
+
+Surface& RHI::GetSurface()
+{
+    return m_surface;
+}
+
+PhysicalDevice& RHI::GetPhysicalDevice()
+{
+    return m_physicalDevice;
+}
+
+Device& RHI::GetDevice()
+{
+    return m_device;
+}
+
+Queue& RHI::GetQueue()
+{
+    return m_queue;
+}
+
+VmaAllocator RHI::GetAllocator()
+{
+    return m_vulkanAllocator;
 }
 
 CommandPool& RHI::GetCommandPool()

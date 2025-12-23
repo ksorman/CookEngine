@@ -2,7 +2,7 @@
 #include "spdlog/spdlog.h"
 
 namespace CookEngine {
-    CommandPool::CommandPool(VkDevice& device, uint32_t quequeIndex) : m_device(device)
+    CommandPool::CommandPool(VkDevice device, uint32_t quequeIndex) : m_device(device)
     {
         VkCommandPoolCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;

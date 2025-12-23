@@ -35,14 +35,6 @@ struct UniformBufferObject
     glm::mat4 proj;
 };
 
-struct QueueFamilyIndices
-{
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> presentFamily;
-
-    bool isComplete() { return graphicsFamily.has_value() && presentFamily.has_value(); }
-};
-
 struct SwapChainSupportDetails
 {
     VkSurfaceCapabilitiesKHR capabilities;
@@ -59,15 +51,10 @@ class Renderer
 
     bool& RefToBoolForResize();
 
-    VkDevice& GetDevice();
     RHI* GetRHICmdList();
   private:
     void UpdateUniformBuffer(const Camera& camera, uint32_t currentFrame);
 
-    void CreatePhysicalDevice();
-    void CreateLogicalDevice();
-    bool CreateVMAAllocator();
-    void CreateSurface(GLFWwindow* window);
     VkFormat CreateSwapchain(GLFWwindow* window);
     void CleanupSwapchain();
     void RecreateSwapchain();
@@ -114,8 +101,6 @@ class Renderer
 
     void CreateTextureSampler();
 
-    void DestroySurface();
-    void DestroyDevice();
     void DestroySwapchain();
     void DestroyImageView();
     void DestroyFramebuffers();
@@ -131,9 +116,6 @@ class Renderer
     void DestroyTextureSampler();
     void DestroyDepthBuffer();
 
-    void DestroyVMAAllocator();
-
-    QueueFamilyIndices ChooseQueue();
     SwapChainSupportDetails QuerySwapChainSupport();
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
@@ -145,13 +127,6 @@ class Renderer
   private:
     GLFWwindow* m_window;
 
-    Instance m_instance;
-    VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
-    VkDevice m_device;
-    VkQueue m_graphicsQueue;
-    VkQueue m_presentQueue;
-
-    VkSurfaceKHR m_surface;
     VkSwapchainKHR m_swapChain;
     VkExtent2D m_swapChainExtent;
     std::vector<VkImage> m_swapChainImages;
@@ -190,7 +165,6 @@ class Renderer
     VmaAllocation m_depthBufferMemory;
     VkImageView m_depthBufferView;
 
-    VmaAllocator m_vmaAllocator;
     ShaderLoader m_shaderLoader;
 
     std::unique_ptr<RHI> m_RHICmdList;

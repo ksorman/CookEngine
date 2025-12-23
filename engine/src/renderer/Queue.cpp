@@ -70,4 +70,20 @@ std::vector<VkDeviceQueueCreateInfo> Queue::CreateQueueInfosForLogicalDevice(VkP
 
     return queueInfos;
 }
+
+VkQueue Queue::GetGraphicQueue()
+{
+    return m_graphicQueue;
+}
+
+VkQueue Queue::GetPresentQueue()
+{
+    return m_presentQueue;
+}
+
+uint32_t Queue::GetGraphicQueueIndex()
+{
+    return m_queueFamilyIndices.graphicsFamily.value();
+}
+
 }// namespace CookEngine

@@ -8,13 +8,13 @@ class Pipeline
 {
   public:
     ~Pipeline();
-    bool CreatePipeline(VkDevice& device, const VkGraphicsPipelineCreateInfo* createInfo);
+    bool CreatePipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* createInfo);
     void DestroyPipeline();
     operator VkPipeline&();
 
   private:
     VkPipeline m_pipeline;
-    VkDevice* m_device;
+    VkDevice m_device;
 
     bool m_isInitialized = false;
 };
