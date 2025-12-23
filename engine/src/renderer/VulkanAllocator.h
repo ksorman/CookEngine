@@ -4,14 +4,22 @@
 #include "VmaUsage.h"
 
 namespace CookEngine {
-    class VulkanAllocator{
-        public:
-        VulkanAllocator(VkPhysicalDevice physicalDevice, VkDevice device, VkInstance instance);
-        ~VulkanAllocator();
-        operator VmaAllocator();
-        private:
-            VmaAllocator m_allocator;
-    };
-}
+class VulkanAllocator
+{
+  public:
+    VulkanAllocator(VkPhysicalDevice physicalDevice, VkDevice device, VkInstance instance);
+    ~VulkanAllocator();
+
+    VulkanAllocator(VulkanAllocator&) = delete;
+    VulkanAllocator(VulkanAllocator&&) = delete;
+    VulkanAllocator operator=(VulkanAllocator&) = delete;
+    VulkanAllocator operator=(VulkanAllocator&&) = delete;
+
+    operator VmaAllocator();
+
+  private:
+    VmaAllocator m_allocator;
+};
+}// namespace CookEngine
 
 #endif

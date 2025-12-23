@@ -9,6 +9,12 @@ class Device
   public:
     Device(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
     ~Device();
+
+    Device(Device&) = delete;
+    Device(Device&&) = delete;
+    Device operator=(Device&) = delete;
+    Device operator=(Device&&) = delete;
+
     operator VkDevice();
 
   private:

@@ -11,6 +11,12 @@ class Surface
   public:
     Surface(VkInstance instance, GLFWwindow* window);
     ~Surface();
+
+    Surface(Surface&) = delete;
+    Surface(Surface&&) = delete;
+    Surface operator=(Surface&) = delete;
+    Surface operator=(Surface&&) = delete;
+
     operator VkSurfaceKHR();
 
   private:

@@ -11,6 +11,11 @@ class Instance
     Instance();
     ~Instance();
 
+    Instance(Instance&) = delete;
+    Instance(Instance&&) = delete;
+    Instance operator=(Instance&) = delete;
+    Instance operator=(Instance&&) = delete;
+
     operator VkInstance();
 
   private:
