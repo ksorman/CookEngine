@@ -24,8 +24,6 @@ class RHI
     VkCommandBuffer BeginSingleTimeCommands();
     void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
-
-
     VmaAllocator& GetAllocator();
     CommandPool& GetCommandPool();
 

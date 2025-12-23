@@ -31,7 +31,6 @@ void Renderer::Init(GLFWwindow* window)
     m_window = window;
 
     spdlog::info("[Vulkan] Reneder Init");
-    CreateInstance();
     CreateSurface(m_window);
     CreatePhysicalDevice();
     CreateLogicalDevice();
@@ -152,7 +151,6 @@ void Renderer::Deinit()
     DestroyVMAAllocator();
     DestroyDevice();
     DestroySurface();
-    DestroyInstance();
 }
 
 bool& Renderer::RefToBoolForResize()
@@ -173,56 +171,17 @@ void Renderer::UpdateUniformBuffer(const Camera& camera, uint32_t currentFrame)
     memcpy(m_uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 }
 
-void Renderer::CreateInstance()
-{
-    if (volkInitialize() != VK_SUCCESS) {
-        spdlog::error("[Vulkan] Failed to initialize Volk!");
-    }
-
-    VkApplicationInfo appInfo{ .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-        .pNext = nullptr,
-        .pApplicationName = "Demo",
-        .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
-        .pEngineName = "CookEngine",
-        .engineVersion = VK_MAKE_VERSION(1, 0, 0),
-        .apiVersion = VK_API_VERSION_1_0 };
-
-    std::vector<const char*> layers = { "VK_LAYER_KHRONOS_validation" };
-
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions;
-
-    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-    VkInstanceCreateInfo insatnceCreateInfo{ .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .pApplicationInfo = &appInfo,
-        .enabledLayerCount = static_cast<uint32_t>(layers.size()),
-        .ppEnabledLayerNames = layers.data(),
-        .enabledExtensionCount = glfwExtensionCount,
-        .ppEnabledExtensionNames = glfwExtensions };
-
-    auto vkResult = vkCreateInstance(&insatnceCreateInfo, nullptr, &m_vkInstance);
-    if (vkResult == VK_SUCCESS) {
-        volkLoadInstance(m_vkInstance);
-        spdlog::info("[Vulkan] Instance was created successfully");
-    } else {
-        spdlog::error("[Vulkan] Instance wasn't created");
-    }
-}
-
 void Renderer::CreatePhysicalDevice()
 {
     uint32_t numDevices = 0;
-    auto vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &numDevices, nullptr);
+    auto vkResult = vkEnumeratePhysicalDevices(m_instance, &numDevices, nullptr);
     if (vkResult != VK_SUCCESS) {
         spdlog::error("[Vulkan] Devices not found");
     }
 
     if (numDevices > 0) {
         std::vector<VkPhysicalDevice> devices(numDevices);
-        auto vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &numDevices, devices.data());
+        auto vkResult = vkEnumeratePhysicalDevices(m_instance, &numDevices, devices.data());
         if (vkResult == VK_SUCCESS) {
             for (const auto& device : devices) {
                 VkPhysicalDeviceProperties property;
@@ -345,7 +304,7 @@ void Renderer::CreateSurface(GLFWwindow* window)
     createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     createInfo.hwnd = glfwGetWin32Window(window);
     createInfo.hinstance = GetModuleHandle(nullptr);
-    auto vkResult = vkCreateWin32SurfaceKHR(m_vkInstance, &createInfo, nullptr, &m_surface);
+    auto vkResult = vkCreateWin32SurfaceKHR(m_instance, &createInfo, nullptr, &m_surface);
     if (vkResult != VK_SUCCESS) {
         spdlog::error("[Vulkan] Creating surface failed");
     }
@@ -1228,7 +1187,7 @@ bool Renderer::CreateVMAAllocator()
         .pDeviceMemoryCallbacks = nullptr,
         .pHeapSizeLimit = nullptr,
         .pVulkanFunctions = &vmaFunctions,
-        .instance = m_vkInstance,
+        .instance = m_instance,
         .vulkanApiVersion = VK_API_VERSION_1_0,
         .pTypeExternalMemoryHandleTypes = nullptr };
 
@@ -1240,14 +1199,9 @@ bool Renderer::CreateVMAAllocator()
     return false;
 }
 
-void Renderer::DestroyInstance()
-{
-    vkDestroyInstance(m_vkInstance, nullptr);
-}
-
 void Renderer::DestroySurface()
 {
-    vkDestroySurfaceKHR(m_vkInstance, m_surface, nullptr);
+    vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 }
 
 void Renderer::DestroyDevice()

@@ -12,6 +12,7 @@
 #include "RHIBuffer.h"
 #include "ShaderLoader.h"
 #include "VmaUsage.h"
+#include "Instance.h"
 #include "utils/GeometryPrimitives.h"
 #include "RHI.h"
 
@@ -63,7 +64,6 @@ class Renderer
   private:
     void UpdateUniformBuffer(const Camera& camera, uint32_t currentFrame);
 
-    void CreateInstance();
     void CreatePhysicalDevice();
     void CreateLogicalDevice();
     bool CreateVMAAllocator();
@@ -114,7 +114,6 @@ class Renderer
 
     void CreateTextureSampler();
 
-    void DestroyInstance();
     void DestroySurface();
     void DestroyDevice();
     void DestroySwapchain();
@@ -146,7 +145,7 @@ class Renderer
   private:
     GLFWwindow* m_window;
 
-    VkInstance m_vkInstance;
+    Instance m_instance;
     VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
     VkDevice m_device;
     VkQueue m_graphicsQueue;
