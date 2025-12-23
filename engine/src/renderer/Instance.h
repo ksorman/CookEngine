@@ -5,16 +5,17 @@
 
 namespace CookEngine {
 
-    class Instance
-    {
-        public:
-            Instance();
-            ~Instance();
+class Instance
+{
+  public:
+    Instance();
+    ~Instance();
 
-            operator VkInstance();
-        private:
-        VkInstance m_instance;
-    };
-}
+    operator VkInstance();
+
+  private:
+    VkInstance m_instance;
+};
+}// namespace CookEngine
 
 #endif
