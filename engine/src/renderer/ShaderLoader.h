@@ -10,7 +10,7 @@ class ShaderLoader
 {
   public:
     ShaderLoader() = default;
-    ShaderLoader(VkDevice device);
+    explicit ShaderLoader(VkDevice device);
     void Init(VkDevice device);
     Shader LoadShader(const std::wstring& fileName);
 

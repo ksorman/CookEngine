@@ -4,6 +4,7 @@
 #include "RHI.h"
 #include "RHIBuffer.h"
 #include "Scene.h"
+#include "Swapchain.h"
 #include "VmaUsage.h"
 #include "glm/ext/matrix_transform.hpp"
 #include "utils/GeometryPrimitives.h"
@@ -12,7 +13,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <set>
 #include <spdlog/spdlog.h>
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -28,19 +28,14 @@ namespace CookEngine {
 
 void Renderer::Init(GLFWwindow* window)
 {
-    m_window = window;
-
     spdlog::info("[Vulkan] Reneder Init");
-    m_RHICmdList = std::make_unique<RHI>(m_window);
+    m_RHICmdList = std::make_unique<RHI>(window);
     m_shaderLoader.Init(m_RHICmdList->GetDevice());
-    auto format = CreateSwapchain(m_window);
-    CreateImageView(format);
-    CreateRenderPass(format);
+    m_swapchain = std::make_unique<Swapchain>(*m_RHICmdList.get(), window);
+    CreateRenderPass();
+    m_swapchain->Init(m_renderPass);
     CreateDescriptorSetLayout();
     CreateGraphicsPipeline();
-    CreateDepthBuffer();
-    CreateDepthBufferView();
-    CreateFramebuffers();
     CreateUniformBuffers();
     CreateTextureImage();
     CreateTextureImageView();
@@ -61,12 +56,16 @@ void Renderer::DrawFrame(Scene& scene)
 
     uint32_t imageIndex;
 
-    VkResult result = vkAcquireNextImageKHR(
-      m_RHICmdList->GetDevice(), m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(m_RHICmdList->GetDevice(),
+      *m_swapchain.get(),
+      UINT64_MAX,
+      m_imageAvailableSemaphores[m_currentFrame],
+      VK_NULL_HANDLE,
+      &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         spdlog::info("[Vulkan] Framebuffer was resized: {}", framebufferResized);
-        RecreateSwapchain();
+        m_swapchain->RecreateSwapchain(m_renderPass);
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         spdlog::error("[Vulkan] Failed to acquire swap chain image!");
@@ -96,7 +95,8 @@ void Renderer::DrawFrame(Scene& scene)
     submitInfo.pSignalSemaphores = signalSemaphores;
 
 
-    if (vkQueueSubmit(m_RHICmdList->GetQueue().GetGraphicQueue(), 1, &submitInfo, m_inFlightFences[m_currentFrame]) != VK_SUCCESS) {
+    if (vkQueueSubmit(m_RHICmdList->GetQueue().GetGraphicQueue(), 1, &submitInfo, m_inFlightFences[m_currentFrame])
+        != VK_SUCCESS) {
         spdlog::error("[Vulkan] Failed to submit draw command buffer!");
     }
 
@@ -105,7 +105,7 @@ void Renderer::DrawFrame(Scene& scene)
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
 
-    VkSwapchainKHR swapChains[] = { m_swapChain };
+    VkSwapchainKHR swapChains[] = { *m_swapchain.get() };
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
@@ -116,7 +116,7 @@ void Renderer::DrawFrame(Scene& scene)
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
         spdlog::info("[Vulkan] Framebuffer was resized: {}", framebufferResized);
         framebufferResized = false;
-        RecreateSwapchain();
+        m_swapchain->RecreateSwapchain(m_renderPass);
     } else if (result != VK_SUCCESS) {
         spdlog::error("[Vulkan] Failed to present swap chain image!");
     }
@@ -134,15 +134,11 @@ void Renderer::Deinit()
     DestroyTextureImageView();
     DestroyTextureImage();
     DestroyUniformBuffer();
-    DestroyFramebuffers();
     m_graphicsPipeline.DestroyPipeline();
     DestroyRenderPass();
     DestroyDescriptorSetLayout();
     DestroyPipelineLayout();
-    DestroyDepthBufferView();
-    DestroyDepthBuffer();
-    DestroyImageView();
-    DestroySwapchain();
+    m_swapchain.reset();
     m_RHICmdList.reset();
 }
 
@@ -164,65 +160,6 @@ void Renderer::UpdateUniformBuffer(const Camera& camera, uint32_t currentFrame)
     memcpy(m_uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 }
 
-SwapChainSupportDetails Renderer::QuerySwapChainSupport()
-{
-    SwapChainSupportDetails details;
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_RHICmdList->GetPhysicalDevice(), m_RHICmdList->GetSurface(), &details.capabilities);
-
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(m_RHICmdList->GetPhysicalDevice(), m_RHICmdList->GetSurface(), &formatCount, nullptr);
-
-    if (formatCount != 0) {
-        details.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(m_RHICmdList->GetPhysicalDevice(), m_RHICmdList->GetSurface(), &formatCount, details.formats.data());
-    }
-
-    uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(m_RHICmdList->GetPhysicalDevice(), m_RHICmdList->GetSurface(), &presentModeCount, nullptr);
-
-    if (presentModeCount != 0) {
-        details.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(
-          m_RHICmdList->GetPhysicalDevice(), m_RHICmdList->GetSurface(), &presentModeCount, details.presentModes.data());
-    }
-
-    return details;
-}
-
-VkSurfaceFormatKHR Renderer::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
-{
-    for (const auto& availableFormat : availableFormats) {
-        if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB
-            && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-            return availableFormat;
-        }
-    }
-    spdlog::warn("[Vulkan] Needed format didnt found!");
-    return availableFormats[0];
-}
-
-VkPresentModeKHR Renderer::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
-{
-    return VK_PRESENT_MODE_FIFO_KHR;
-}
-
-VkExtent2D Renderer::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* window)
-{
-    int width = 0;
-    int height = 0;
-    glfwGetFramebufferSize(window, &width, &height);
-
-    VkExtent2D actualExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
-
-    actualExtent.width =
-      std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-    actualExtent.height =
-      std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-
-    return actualExtent;
-}
-
 uint32_t Renderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
@@ -235,116 +172,6 @@ uint32_t Renderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags pro
 
     spdlog::error("[Vulkan] Failed to find suitable memory type!");
     return 0;
-}
-
-VkFormat Renderer::CreateSwapchain(GLFWwindow* window)
-{
-    SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport();
-
-    VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
-    VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.presentModes);
-    m_swapChainExtent = ChooseSwapExtent(swapChainSupport.capabilities, window);
-
-    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-
-    VkSwapchainCreateInfoKHR createInfo{ .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = m_RHICmdList->GetSurface(),
-        .minImageCount = imageCount,
-        .imageFormat = surfaceFormat.format,
-        .imageColorSpace = surfaceFormat.colorSpace,
-        .imageExtent = m_swapChainExtent,
-        .imageArrayLayers = 1,
-        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .queueFamilyIndexCount = 0,// Optional
-        .pQueueFamilyIndices = nullptr,// Optional
-        .preTransform = swapChainSupport.capabilities.currentTransform,
-        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-        .presentMode = presentMode,
-        .clipped = VK_TRUE,
-        .oldSwapchain = VK_NULL_HANDLE };
-
-    auto result = vkCreateSwapchainKHR(m_RHICmdList->GetDevice(), &createInfo, nullptr, &m_swapChain);
-
-    if (result != VK_SUCCESS) {
-        spdlog::error("[Vulkan] Failed to create swap chain!");
-        return surfaceFormat.format;
-    }
-
-    vkGetSwapchainImagesKHR(m_RHICmdList->GetDevice(), m_swapChain, &imageCount, nullptr);
-    m_swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(m_RHICmdList->GetDevice(), m_swapChain, &imageCount, m_swapChainImages.data());
-
-    spdlog::info("[Vulkan] Swapchain created successfully");
-
-    return surfaceFormat.format;
-}
-
-void Renderer::CleanupSwapchain()
-{
-    DestroyFramebuffers();
-    DestroyImageView();
-    DestroySwapchain();
-
-    DestroyDepthBufferView();
-    DestroyDepthBuffer();
-}
-
-void Renderer::RecreateSwapchain()
-{
-    vkDeviceWaitIdle(m_RHICmdList->GetDevice());
-
-    CleanupSwapchain();
-
-    auto format = CreateSwapchain(m_window);
-    CreateImageView(format);
-    CreateDepthBuffer();
-    CreateDepthBufferView();
-    CreateFramebuffers();
-}
-
-void Renderer::CreateImageView(const VkFormat& format)
-{
-    m_swapChainImageViews.resize(m_swapChainImages.size());
-
-    VkImageSubresourceRange subresourceRange{
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .baseMipLevel = 0,
-        .levelCount = 1,
-        .baseArrayLayer = 0,
-        .layerCount = 1,
-    };
-
-    for (size_t i = 0; i < m_swapChainImages.size(); i++) {
-        m_swapChainImageViews[i] = CreateImageView(m_swapChainImages[i], format, VK_IMAGE_ASPECT_COLOR_BIT);
-    }
-    spdlog::info("[Vulkan] ImageView for swapchain successfully created");
-}
-
-VkFormat Renderer::FindSupportedFormat(const std::vector<VkFormat>& candidates,
-  VkImageTiling tiling,
-  VkFormatFeatureFlags features)
-{
-    for (VkFormat format : candidates) {
-        VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(m_RHICmdList->GetPhysicalDevice(), format, &props);
-
-        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-            return format;
-        } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
-            return format;
-        }
-    }
-
-    spdlog::error("[Vulkan] Failed to find supported format!");
-    return VK_FORMAT_UNDEFINED;
-}
-
-VkFormat Renderer::FindDepthFormat()
-{
-    return FindSupportedFormat({ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
-      VK_IMAGE_TILING_OPTIMAL,
-      VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
 void Renderer::CreateUniformBuffers()
@@ -366,28 +193,6 @@ void Renderer::CreateUniformBuffers()
 RHI* Renderer::GetRHICmdList()
 {
     return m_RHICmdList.get();
-}
-
-void Renderer::CreateFramebuffers()
-{
-    m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
-
-    for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
-        VkImageView attachments[] = { m_swapChainImageViews[i], m_depthBufferView };
-
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = m_renderPass;
-        framebufferInfo.attachmentCount = 2;
-        framebufferInfo.pAttachments = attachments;
-        framebufferInfo.width = m_swapChainExtent.width;
-        framebufferInfo.height = m_swapChainExtent.height;
-        framebufferInfo.layers = 1;
-
-        if (vkCreateFramebuffer(m_RHICmdList->GetDevice(), &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]) == VK_SUCCESS) {
-            spdlog::info("[Vulkan] Framebuffer crated successfully");
-        }
-    }
 }
 
 void Renderer::CreateDescriptorSetLayout()
@@ -413,7 +218,8 @@ void Renderer::CreateDescriptorSetLayout()
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
-    if (vkCreateDescriptorSetLayout(m_RHICmdList->GetDevice(), &layoutInfo, nullptr, &m_descriptorSetLayout) != VK_SUCCESS) {
+    if (vkCreateDescriptorSetLayout(m_RHICmdList->GetDevice(), &layoutInfo, nullptr, &m_descriptorSetLayout)
+        != VK_SUCCESS) {
         spdlog::error("[Vulkan] Failed to create descriptor set layout!");
     }
 }
@@ -447,17 +253,18 @@ void Renderer::CreateGraphicsPipeline()
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = m_swapchain->GetExtent();
+
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(m_swapChainExtent.width);
-    viewport.height = static_cast<float>(m_swapChainExtent.height);
+    viewport.width = static_cast<float>(scissor.extent.width);
+    viewport.height = static_cast<float>(scissor.extent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
-    VkRect2D scissor{};
-    scissor.offset = { 0, 0 };
-    scissor.extent = m_swapChainExtent;
 
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -515,7 +322,8 @@ void Renderer::CreateGraphicsPipeline()
     pipelineLayoutInfo.pushConstantRangeCount = 0;// Optional
     pipelineLayoutInfo.pPushConstantRanges = nullptr;// Optional
 
-    if (vkCreatePipelineLayout(m_RHICmdList->GetDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(m_RHICmdList->GetDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout)
+        != VK_SUCCESS) {
         spdlog::error("[Vulkan] Failed to create pipeline layout!");
     }
 
@@ -565,10 +373,10 @@ VkShaderModule Renderer::CreateShaderModule(const std::vector<char>& code)
     return shaderModule;
 }
 
-void Renderer::CreateRenderPass(const VkFormat& format)
+void Renderer::CreateRenderPass()
 {
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = format;
+    colorAttachment.format = m_swapchain->GetFrameBufferFormat();
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -578,7 +386,7 @@ void Renderer::CreateRenderPass(const VkFormat& format)
     colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = FindDepthFormat();
+    depthAttachment.format = m_swapchain->GetDepthBufferFormat();
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -655,12 +463,14 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
         spdlog::error("[Vulkan] Failed to begin recording command buffer!");
     }
 
+    VkExtent2D swapchainExtent = m_swapchain->GetExtent();
+
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = m_renderPass;
-    renderPassInfo.framebuffer = m_swapChainFramebuffers[imageIndex];
+    renderPassInfo.framebuffer = m_swapchain->GetFrameBuffer(imageIndex);
     renderPassInfo.renderArea.offset = { 0, 0 };
-    renderPassInfo.renderArea.extent = m_swapChainExtent;
+    renderPassInfo.renderArea.extent = swapchainExtent;
 
     VkClearValue clearValue[2];
     clearValue[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -676,15 +486,15 @@ void Renderer::RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(m_swapChainExtent.width);
-    viewport.height = static_cast<float>(m_swapChainExtent.height);
+    viewport.width = static_cast<float>(swapchainExtent.width);
+    viewport.height = static_cast<float>(swapchainExtent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = { 0, 0 };
-    scissor.extent = m_swapChainExtent;
+    scissor.extent = swapchainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
     {
         auto view = scene.GetRegistry().view<std::shared_ptr<Model>>();
@@ -776,8 +586,11 @@ void Renderer::CreateDescriptorSets()
         descriptorWrites[1].descriptorCount = 1;
         descriptorWrites[1].pImageInfo = &imageInfo;
 
-        vkUpdateDescriptorSets(
-          m_RHICmdList->GetDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+        vkUpdateDescriptorSets(m_RHICmdList->GetDevice(),
+          static_cast<uint32_t>(descriptorWrites.size()),
+          descriptorWrites.data(),
+          0,
+          nullptr);
     }
 }
 
@@ -795,28 +608,14 @@ void Renderer::CreateSyncObjects()
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        if (vkCreateSemaphore(m_RHICmdList->GetDevice(), &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i]) != VK_SUCCESS
-            || vkCreateSemaphore(m_RHICmdList->GetDevice(), &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]) != VK_SUCCESS
+        if (vkCreateSemaphore(m_RHICmdList->GetDevice(), &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i])
+              != VK_SUCCESS
+            || vkCreateSemaphore(m_RHICmdList->GetDevice(), &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i])
+                 != VK_SUCCESS
             || vkCreateFence(m_RHICmdList->GetDevice(), &fenceInfo, nullptr, &m_inFlightFences[i]) != VK_SUCCESS) {
             spdlog::error("[Vulkan] Failed to create semaphores!");
         }
     }
-}
-
-void Renderer::CreateDepthBuffer()
-{
-    CreateImage(m_swapChainExtent.width,
-      m_swapChainExtent.height,
-      FindDepthFormat(),
-      VK_IMAGE_TILING_OPTIMAL,
-      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-      m_depthBuffer,
-      m_depthBufferMemory,
-      0);
-
-    TransitionImageLayout(
-      m_depthBuffer, FindDepthFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
 void Renderer::CreateTextureImage()
@@ -846,23 +645,21 @@ void Renderer::CreateTextureImage()
 
     stbi_image_free(pixels);
 
-    CreateImage(texWidth,
+    m_textureImage = m_RHICmdList->CreateImage(texWidth,
       texHeight,
       VK_FORMAT_R8G8B8A8_SRGB,
       VK_IMAGE_TILING_OPTIMAL,
       VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
       VK_SHARING_MODE_EXCLUSIVE,
-      m_textureImage,
-      m_textureImageMemory,
       0);
 
-    TransitionImageLayout(
-      m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    m_RHICmdList->TransitionImageLayout(
+      m_textureImage.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    CopyBufferToImage(
-      stagingBuffer.buffer, m_textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+    m_RHICmdList->CopyBufferToImage(
+      stagingBuffer.buffer, m_textureImage.image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
 
-    TransitionImageLayout(m_textureImage,
+    m_RHICmdList->TransitionImageLayout(m_textureImage.image,
       VK_FORMAT_R8G8B8A8_SRGB,
       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -870,115 +667,9 @@ void Renderer::CreateTextureImage()
     vmaDestroyBuffer(m_RHICmdList->GetAllocator(), stagingBuffer.buffer, stagingBuffer.bufferAllocation);
 }
 
-bool Renderer::HasStencilComponent(VkFormat format)
-{
-    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-}
-
-void Renderer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
-{
-    VkCommandBuffer commandBuffer = m_RHICmdList->BeginSingleTimeCommands();
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-
-    VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
-    if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        if (HasStencilComponent(format)) {
-            barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
-    } else {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    }
-
-    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-               && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    } else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED
-               && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask =
-          VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    } else {
-        spdlog::error("[Vulkan] Unsupported layout transition!");
-    }
-
-    vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-    m_RHICmdList->EndSingleTimeCommands(commandBuffer);
-}
-
-void Renderer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
-{
-    VkCommandBuffer commandBuffer = m_RHICmdList->BeginSingleTimeCommands();
-    VkBufferImageCopy region{};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-
-    region.imageOffset = { 0, 0, 0 };
-    region.imageExtent = { width, height, 1 };
-    vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-    m_RHICmdList->EndSingleTimeCommands(commandBuffer);
-}
-
-void Renderer::CreateDepthBufferView()
-{
-    m_depthBufferView = CreateImageView(m_depthBuffer, FindDepthFormat(), VK_IMAGE_ASPECT_DEPTH_BIT);
-}
-
 void Renderer::CreateTextureImageView()
 {
-    m_textureImageView = CreateImageView(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
-}
-
-VkImageView Renderer::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectMask)
-{
-    VkImageViewCreateInfo viewInfo{};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = format;
-    viewInfo.subresourceRange.aspectMask = aspectMask;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-
-    VkImageView imageView;
-    if (vkCreateImageView(m_RHICmdList->GetDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-        spdlog::error("[Vulkan] Failed to create texture image view!");
-    }
-
-    return imageView;
+    m_textureImageView = m_RHICmdList->CreateImageView(m_textureImage.image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void Renderer::CreateTextureSampler()
@@ -1009,61 +700,6 @@ void Renderer::CreateTextureSampler()
     }
 }
 
-bool Renderer::CreateImage(uint32_t width,
-  uint32_t height,
-  VkFormat format,
-  VkImageTiling tiling,
-  VkImageUsageFlags usage,
-  VkMemoryPropertyFlags properties,
-  VkImage& image,
-  VmaAllocation& imageMemory,
-  VmaAllocationCreateFlags vmaFlags)
-{
-    VmaAllocationCreateInfo allocInfo{};
-    allocInfo.flags = vmaFlags;
-    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    allocInfo.requiredFlags = properties;
-
-    VkImageCreateInfo imageInfo{};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = width;
-    imageInfo.extent.height = height;
-    imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = 1;
-    imageInfo.format = format;
-    imageInfo.tiling = tiling;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = usage;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vmaCreateImage(m_RHICmdList->GetAllocator(), &imageInfo, &allocInfo, &image, &imageMemory, nullptr) != VK_SUCCESS) {
-        spdlog::error("[Vulkan] Failed to create image!");
-        return false;
-    }
-    return true;
-}
-
-void Renderer::DestroySwapchain()
-{
-    vkDestroySwapchainKHR(m_RHICmdList->GetDevice(), m_swapChain, nullptr);
-}
-
-void Renderer::DestroyImageView()
-{
-    for (auto imageView : m_swapChainImageViews) {
-        vkDestroyImageView(m_RHICmdList->GetDevice(), imageView, nullptr);
-    }
-}
-void Renderer::DestroyFramebuffers()
-{
-    for (auto framebuffer : m_swapChainFramebuffers) {
-        vkDestroyFramebuffer(m_RHICmdList->GetDevice(), framebuffer, nullptr);
-    }
-}
-
 void Renderer::DestroyPipelineLayout()
 {
     vkDestroyPipelineLayout(m_RHICmdList->GetDevice(), m_pipelineLayout, nullptr);
@@ -1090,14 +726,15 @@ void Renderer::DestroySyncObjects()
 
 void Renderer::DestroyTextureImage()
 {
-    vmaDestroyImage(m_RHICmdList->GetAllocator(), m_textureImage, m_textureImageMemory);
+    m_RHICmdList->DestroyTextureImage(m_textureImage);
 }
 
 void Renderer::DestroyUniformBuffer()
 {
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vmaUnmapMemory(m_RHICmdList->GetAllocator(), m_uniformBuffers[i].bufferAllocation);
-        vmaDestroyBuffer(m_RHICmdList->GetAllocator(), m_uniformBuffers[i].buffer, m_uniformBuffers[i].bufferAllocation);
+        vmaDestroyBuffer(
+          m_RHICmdList->GetAllocator(), m_uniformBuffers[i].buffer, m_uniformBuffers[i].bufferAllocation);
     }
 }
 
@@ -1111,19 +748,9 @@ void Renderer::DestroyTextureImageView()
     vkDestroyImageView(m_RHICmdList->GetDevice(), m_textureImageView, nullptr);
 }
 
-void Renderer::DestroyDepthBufferView()
-{
-    vkDestroyImageView(m_RHICmdList->GetDevice(), m_depthBufferView, nullptr);
-}
-
 void Renderer::DestroyTextureSampler()
 {
     vkDestroySampler(m_RHICmdList->GetDevice(), m_textureSampler, nullptr);
-}
-
-void Renderer::DestroyDepthBuffer()
-{
-    vmaDestroyImage(m_RHICmdList->GetAllocator(), m_depthBuffer, m_depthBufferMemory);
 }
 
 void Renderer::InitScene(Scene& scene)

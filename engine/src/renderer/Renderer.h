@@ -1,19 +1,16 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include <array>
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
 #include "Pipeline.h"
 #include "RHIBuffer.h"
+#include "RHIImage.h"
 #include "ShaderLoader.h"
-#include "VmaUsage.h"
-#include "Instance.h"
-#include "utils/GeometryPrimitives.h"
+#include "Swapchain.h"
 #include "RHI.h"
 
 #define GLFW_INCLUDE_VULKAN
@@ -35,13 +32,6 @@ struct UniformBufferObject
     glm::mat4 proj;
 };
 
-struct SwapChainSupportDetails
-{
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-};
-
 class Renderer
 {
   public:
@@ -55,22 +45,12 @@ class Renderer
   private:
     void UpdateUniformBuffer(const Camera& camera, uint32_t currentFrame);
 
-    VkFormat CreateSwapchain(GLFWwindow* window);
-    void CleanupSwapchain();
-    void RecreateSwapchain();
-    void CreateImageView(const VkFormat& format);
-
-    VkFormat
-      FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-    VkFormat FindDepthFormat();
-
     void CreateUniformBuffers();
 
-    void CreateFramebuffers();
     void CreateDescriptorSetLayout();
     void CreateGraphicsPipeline();
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
-    void CreateRenderPass(const VkFormat& format);
+    void CreateRenderPass();
     
     void CreateCommandBuffers();
     void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, Scene& scene);
@@ -80,30 +60,11 @@ class Renderer
 
     void CreateSyncObjects();
 
-    void CreateDepthBuffer();
     void CreateTextureImage();
-    bool CreateImage(uint32_t width,
-      uint32_t height,
-      VkFormat format,
-      VkImageTiling tiling,
-      VkImageUsageFlags usage,
-      VkMemoryPropertyFlags properties,
-      VkImage& image,
-      VmaAllocation& imageMemory,
-      VmaAllocationCreateFlags vmaFlags);
-    bool HasStencilComponent(VkFormat format);
-    void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
-    void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-
-    void CreateDepthBufferView();
     void CreateTextureImageView();
-    VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectMask);
 
     void CreateTextureSampler();
 
-    void DestroySwapchain();
-    void DestroyImageView();
-    void DestroyFramebuffers();
     void DestroyRenderPass();
     void DestroyPipelineLayout();
     void DestroyDescriptorSetLayout();
@@ -112,26 +73,15 @@ class Renderer
     void DestroyUniformBuffer();
     void DestroyDescriptorPool();
     void DestroyTextureImageView();
-    void DestroyDepthBufferView();
     void DestroyTextureSampler();
-    void DestroyDepthBuffer();
 
-    SwapChainSupportDetails QuerySwapChainSupport();
-    VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-    VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-    VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* window);
+
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
     void InitScene(Scene& scene);
 
   private:
-    GLFWwindow* m_window;
-
-    VkSwapchainKHR m_swapChain;
-    VkExtent2D m_swapChainExtent;
-    std::vector<VkImage> m_swapChainImages;
-    std::vector<VkImageView> m_swapChainImageViews;
-    std::vector<VkFramebuffer> m_swapChainFramebuffers;
+    std::unique_ptr<Swapchain> m_swapchain;
 
     VkRenderPass m_renderPass;
     VkDescriptorSetLayout m_descriptorSetLayout;
@@ -155,15 +105,10 @@ class Renderer
     std::vector<RHIBuffer> m_uniformBuffers;
     std::vector<void*> m_uniformBuffersMapped;
 
-    VkImage m_textureImage;
-    VmaAllocation m_textureImageMemory;
+    RHIImage m_textureImage;
     VkImageView m_textureImageView;
 
     VkSampler m_textureSampler;
-
-    VkImage m_depthBuffer;
-    VmaAllocation m_depthBufferMemory;
-    VkImageView m_depthBufferView;
 
     ShaderLoader m_shaderLoader;
 

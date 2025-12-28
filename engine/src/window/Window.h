@@ -11,19 +11,19 @@ class Camera;
 
 struct UserResizeHandler
 {
-  bool* isResized;
-  Camera* camera;
+    bool* isResized;
+    Camera* camera;
 };
 
 struct UserInputHandler
 {
-  InputHandler* inputHandler;
+    InputHandler* inputHandler;
 };
 
 struct UserHandler
 {
-  UserResizeHandler resizeHandler;
-  UserInputHandler inputHandler;
+    UserResizeHandler resizeHandler;
+    UserInputHandler inputHandler;
 };
 
 class Window
@@ -35,10 +35,10 @@ class Window
     bool IsWindowShouldClose();
     void Events();
     void Loop();
-    GLFWwindow *GetHWND();
+    GLFWwindow* GetHWND();
 
     void SetUserDataPtr(UserHandler userHandler);
-    static void ResizeCallback(GLFWwindow *window, int width, int height);
+    static void ResizeCallback(GLFWwindow* window, int width, int height);
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
     static void MousePositionCallback(GLFWwindow* window, double xpos, double ypos);
@@ -48,7 +48,7 @@ class Window
     static const uint32_t HEIGHT = 1080;
 
   private:
-    GLFWwindow *m_window;
+    GLFWwindow* m_window;
     UserHandler m_userHandler;
 };
 }// namespace CookEngine
