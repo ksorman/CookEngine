@@ -2,6 +2,7 @@
 #define SHADER_LOADER_H
 
 #include "Shader.h"
+#include <memory>
 #include <atlbase.h>
 #include <dxcapi.h>
 
@@ -12,7 +13,7 @@ class ShaderLoader
     ShaderLoader() = default;
     explicit ShaderLoader(VkDevice device);
     void Init(VkDevice device);
-    Shader LoadShader(const std::wstring& fileName);
+    std::unique_ptr<Shader> LoadShader(const std::wstring& fileName);
 
   private:
     VkDevice m_device = VK_NULL_HANDLE;

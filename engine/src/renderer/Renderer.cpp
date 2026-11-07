@@ -9,9 +9,9 @@
 #include "glm/ext/matrix_transform.hpp"
 #include "utils/GeometryPrimitives.h"
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <vector>
@@ -31,7 +31,7 @@ void Renderer::Init(GLFWwindow* window)
     spdlog::info("[Vulkan] Reneder Init");
     m_RHICmdList = std::make_unique<RHI>(window);
     m_shaderLoader.Init(m_RHICmdList->GetDevice());
-    m_swapchain = std::make_unique<Swapchain>(*m_RHICmdList.get(), window);
+    m_swapchain = std::make_unique<Swapchain>(*m_RHICmdList, window);
     CreateRenderPass();
     m_swapchain->Init(m_renderPass);
     CreateDescriptorSetLayout();
@@ -226,10 +226,14 @@ void Renderer::CreateDescriptorSetLayout()
 
 void Renderer::CreateGraphicsPipeline()
 {
-    Shader vertShader = m_shaderLoader.LoadShader(PATH_TO_SHADER_FOLDER + L"/triangle.vert.hlsl");
-    Shader fragShader = m_shaderLoader.LoadShader(PATH_TO_SHADER_FOLDER + L"/triangle.frag.hlsl");
+    auto vertShader = m_shaderLoader.LoadShader(PATH_TO_SHADER_FOLDER + L"/triangle.vert.hlsl");
+    auto fragShader = m_shaderLoader.LoadShader(PATH_TO_SHADER_FOLDER + L"/triangle.frag.hlsl");
+    if (!vertShader || !fragShader) {
+        spdlog::critical("[Vulkan] Cannot initialize the graphics pipeline: shader loading failed");
+        return;
+    }
 
-    VkPipelineShaderStageCreateInfo shaderStages[] = { vertShader, fragShader };
+    VkPipelineShaderStageCreateInfo shaderStages[] = { *vertShader, *fragShader };
 
     std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
